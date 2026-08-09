@@ -42,7 +42,7 @@ export default async function Home() {
         <section className="overflow-hidden border-b border-[var(--border)] bg-[var(--page)]">
           <div className="container-shell grid gap-10 py-10 lg:grid-cols-[410px_minmax(0,1fr)] lg:items-center lg:gap-14 lg:py-14 xl:gap-16">
             <div className="p-0">
-              <div className="relative mx-auto aspect-square w-full max-w-[330px] overflow-hidden">
+              <div className="relative mx-auto aspect-square w-full max-w-[330px] overflow-hidden bg-transparent">
                 {settings?.logoUrl ? (
                   <Image
                     src={settings.logoUrl}
@@ -50,7 +50,7 @@ export default async function Home() {
                     width={340}
                     height={340}
                     priority
-                    className="h-full w-full object-contain drop-shadow-[0_18px_36px_rgba(0,0,0,0.18)]"
+                    className="h-full w-full object-contain"
                   />
                 ) : (
                   <Package className="m-auto h-full w-28 text-[var(--muted)]" />
