@@ -1,0 +1,85 @@
+import { z } from "zod";
+
+export const emailSchema = z.string().email().toLowerCase();
+
+export const registerSchema = z.object({
+  name: z.string().min(2).max(80),
+  email: emailSchema,
+  password: z.string().min(8).max(128),
+});
+
+export const loginSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(8).max(128),
+});
+
+export const checkoutSchema = z.object({
+  customerName: z.string().min(2).max(120),
+  customerEmail: emailSchema,
+  customerPhone: z.string().max(40).optional(),
+  shippingAddress: z.string().min(6).max(240),
+  shippingCity: z.string().min(2).max(80),
+  shippingCountry: z.string().min(2).max(80),
+  shippingMethodId: z.string().min(1),
+  paymentMethodId: z.string().min(1),
+});
+
+export const productSchema = z.object({
+  name: z.string().min(2).max(160),
+  description: z.string().min(10),
+  price: z.coerce.number().positive(),
+  sku: z.string().min(2).max(64),
+  stock: z.coerce.number().int().min(0),
+  categoryId: z.string().min(1),
+  active: z.coerce.boolean().default(true),
+  imageUrl: z.string().url().optional().or(z.literal("")),
+  youtubeUrl: z.string().url().optional().or(z.literal("")),
+});
+
+export const categorySchema = z.object({
+  name: z.string().min(2).max(100),
+  description: z.string().max(240).optional(),
+  imageUrl: z.string().url().optional().or(z.literal("")),
+  active: z.coerce.boolean().default(true),
+});
+
+export const shippingSchema = z.object({
+  name: z.string().min(2).max(100),
+  regions: z.string().min(2),
+  cost: z.coerce.number().min(0),
+  enabled: z.coerce.boolean().default(true),
+});
+
+export const paymentSchema = z.object({
+  name: z.string().min(2).max(100),
+  provider: z.enum(["CASH_ON_DELIVERY", "STRIPE", "PAYPAL", "CUSTOM"]),
+  enabled: z.coerce.boolean().default(true),
+  credentials: z.string().optional(),
+});
+
+export const smtpSchema = z.object({
+  host: z.string().min(2),
+  port: z.coerce.number().int().positive(),
+  username: z.string().min(1),
+  password: z.string().min(1),
+  secure: z.coerce.boolean().default(true),
+  senderEmail: emailSchema,
+  senderName: z.string().min(2),
+  enabled: z.coerce.boolean().default(true),
+});
+
+export const aiSchema = z.object({
+  provider: z.enum(["OPENAI", "ANTHROPIC", "GEMINI", "OPENROUTER", "CUSTOM"]),
+  customEndpoint: z.string().url().optional().or(z.literal("")),
+  apiKey: z.string().min(6),
+  activeModel: z.string().optional(),
+  enabled: z.coerce.boolean().default(true),
+});
+
+export const siteSettingsSchema = z.object({
+  shopName: z.string().min(2).max(80),
+  logoUrl: z.string().optional(),
+  faviconUrl: z.string().optional(),
+  brandColor: z.string().min(4).max(20),
+  supportEmail: z.string().email().optional().or(z.literal("")),
+});
