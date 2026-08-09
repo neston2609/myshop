@@ -29,7 +29,7 @@ export default async function Home() {
       <SiteHeader />
       <main>
         <section className="overflow-hidden border-b border-[var(--border)] bg-[var(--page)]">
-          <div className="container-shell grid gap-10 py-10 lg:grid-cols-[410px_minmax(0,1fr)] lg:items-center lg:gap-14 lg:py-14 xl:gap-18">
+          <div className="container-shell grid gap-10 py-10 lg:grid-cols-[410px_minmax(0,1fr)] lg:items-center lg:gap-14 lg:py-14 xl:gap-16">
             <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-5 soft-shadow sm:p-7">
               <div className="relative mx-auto aspect-square w-full max-w-[330px] overflow-hidden">
                 {settings?.logoUrl ? (
