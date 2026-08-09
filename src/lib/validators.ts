@@ -69,9 +69,28 @@ export const shippingSchema = z.object({
 
 export const paymentSchema = z.object({
   name: z.string().min(2).max(100),
-  provider: z.enum(["CASH_ON_DELIVERY", "STRIPE", "PAYPAL", "CUSTOM"]),
+  provider: z.enum(["CASH_ON_DELIVERY", "BANK_TRANSFER", "STRIPE", "PAYPAL", "CUSTOM"]),
   enabled: z.coerce.boolean().default(true),
   credentials: z.string().optional(),
+  bankName: z.string().max(100).optional(),
+  accountName: z.string().max(140).optional(),
+  qrCodeUrl: z.string().optional(),
+}).superRefine((input, context) => {
+  if (input.provider !== "BANK_TRANSFER") return;
+  if (!input.bankName?.trim()) {
+    context.addIssue({
+      code: "custom",
+      message: "Bank name is required",
+      path: ["bankName"],
+    });
+  }
+  if (!input.accountName?.trim()) {
+    context.addIssue({
+      code: "custom",
+      message: "Account name is required",
+      path: ["accountName"],
+    });
+  }
 });
 
 export const smtpSchema = z.object({

@@ -28,6 +28,7 @@ enum OrderStatus {
 
 enum PaymentProvider {
   CASH_ON_DELIVERY
+  BANK_TRANSFER
   STRIPE
   PAYPAL
   CUSTOM

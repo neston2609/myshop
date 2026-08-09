@@ -206,12 +206,20 @@ export async function saveShippingAction(formData: FormData) {
 
 export async function savePaymentAction(formData: FormData) {
   const input = paymentSchema.parse(Object.fromEntries(formData));
+  const credentials = input.provider === "BANK_TRANSFER"
+    ? JSON.stringify({
+        bankName: input.bankName?.trim(),
+        accountName: input.accountName?.trim(),
+        qrCodeUrl: input.qrCodeUrl || "",
+      })
+    : input.credentials;
+
   await prisma.paymentMethod.create({
     data: {
       name: input.name,
       provider: input.provider,
       enabled: input.enabled,
-      credentialsCiphertext: input.credentials ? encryptSecret(input.credentials) : null,
+      credentialsCiphertext: credentials ? encryptSecret(credentials) : null,
     },
   });
   revalidatePath("/admin/payments");

@@ -1,10 +1,27 @@
+import Image from "next/image";
 import { checkoutAction } from "@/app/actions";
 import { SiteHeader } from "@/components/site-header";
 import { getCart } from "@/lib/cart";
+import { decryptSecret } from "@/lib/crypto";
 import { money } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
+
+type BankTransferCredentials = {
+  bankName?: string;
+  accountName?: string;
+  qrCodeUrl?: string;
+};
+
+function bankTransferCredentials(credentials?: string | null): BankTransferCredentials | null {
+  if (!credentials) return null;
+  try {
+    return JSON.parse(decryptSecret(credentials)) as BankTransferCredentials;
+  } catch {
+    return null;
+  }
+}
 
 export default async function CheckoutPage() {
   const [cart, shippingMethods, paymentMethods] = await Promise.all([
@@ -12,6 +29,14 @@ export default async function CheckoutPage() {
     prisma.shippingMethod.findMany({ where: { enabled: true } }),
     prisma.paymentMethod.findMany({ where: { enabled: true } }),
   ]);
+  const bankTransferMethods = paymentMethods
+    .filter((method) => method.provider === "BANK_TRANSFER")
+    .map((method) => ({
+      id: method.id,
+      name: method.name,
+      credentials: bankTransferCredentials(method.credentialsCiphertext),
+    }))
+    .filter((method) => method.credentials);
 
   return (
     <>
@@ -32,6 +57,23 @@ export default async function CheckoutPage() {
             <select name="paymentMethodId" required className="h-11 rounded-md border border-black/10 px-3">
               {paymentMethods.map((method) => <option key={method.id} value={method.id}>{method.name}</option>)}
             </select>
+            {bankTransferMethods.length > 0 ? (
+              <div className="grid gap-3 rounded-md border border-black/10 bg-slate-50 p-4 sm:col-span-2">
+                <h2 className="font-semibold">Bank transfer details</h2>
+                {bankTransferMethods.map((method) => (
+                  <div key={method.id} className="flex flex-col gap-3 rounded-md bg-white p-3 sm:flex-row sm:items-center">
+                    {method.credentials?.qrCodeUrl ? (
+                      <Image src={method.credentials.qrCodeUrl} alt={`${method.name} QR Code`} width={96} height={96} className="rounded-md border border-black/10 object-contain" />
+                    ) : null}
+                    <div className="text-sm">
+                      <p className="font-semibold">{method.name}</p>
+                      <p className="text-slate-600">Bank: {method.credentials?.bankName}</p>
+                      <p className="text-slate-600">Account: {method.credentials?.accountName}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
           <button disabled={cart.items.length === 0} className="mt-6 h-12 w-full rounded-md bg-[#17201c] font-semibold text-white disabled:opacity-40">
             Place order
