@@ -41,6 +41,19 @@ export default async function AdminSettingsPage() {
             </label>
           </div>
           <div className="grid gap-3 border-t border-black/10 pt-4">
+            <div>
+              <h3 className="text-sm font-semibold">Header navigation</h3>
+              <p className="mt-1 text-xs text-slate-500">Add one link per line, using: Label | URL</p>
+            </div>
+            <textarea
+              name="headerLinks"
+              defaultValue={site?.headerLinks || ""}
+              placeholder={"About | /about\nContact | /contact\nFacebook | https://facebook.com/yourshop"}
+              rows={4}
+              className="rounded-md border border-black/10 px-3 py-2"
+            />
+          </div>
+          <div className="grid gap-3 border-t border-black/10 pt-4">
             <h3 className="text-sm font-semibold">Homepage hero text</h3>
             <input name="heroEyebrow" defaultValue={site?.heroEyebrow || defaultHeroEyebrow} placeholder="Small title above hero" required className="h-10 rounded-md border border-black/10 px-3" />
             <input name="heroTitle" defaultValue={site?.heroTitle || defaultHeroTitle} placeholder="Main title" required className="h-10 rounded-md border border-black/10 px-3" />

@@ -5,12 +5,28 @@ import { getCart } from "@/lib/cart";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+function parseHeaderLinks(value?: string | null) {
+  return (value || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [label, ...hrefParts] = line.split("|");
+      return { label: label.trim(), href: hrefParts.join("|").trim() };
+    })
+    .filter((link) => {
+      if (!link.label || !link.href) return false;
+      return link.href.startsWith("/") || link.href.startsWith("https://") || link.href.startsWith("http://");
+    });
+}
+
 export async function SiteHeader() {
   const [cart, session, settings] = await Promise.all([
     getCart(),
     getSession(),
     prisma.siteSettings.findFirst(),
   ]);
+  const customLinks = parseHeaderLinks(settings?.headerLinks);
 
   return (
     <header className="border-b border-[var(--border)] bg-[var(--surface)]/90 text-[var(--text)] backdrop-blur">
@@ -31,6 +47,11 @@ export async function SiteHeader() {
           <Link href="/shop">Shop</Link>
           <Link href="/shop?sort=new">New arrivals</Link>
           <Link href="/shop?stock=in">In stock</Link>
+          {customLinks.map((link) => (
+            <Link key={`${link.label}-${link.href}`} href={link.href}>
+              {link.label}
+            </Link>
+          ))}
           {session?.role === "ADMIN" ? <Link href="/admin">Admin</Link> : null}
         </nav>
         <div className="flex items-center gap-2">

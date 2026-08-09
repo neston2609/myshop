@@ -112,7 +112,7 @@ export const smtpSchema = z.object({
 export const aiSchema = z.object({
   provider: z.enum(["OPENAI", "ANTHROPIC", "GEMINI", "OPENROUTER", "CUSTOM"]),
   customEndpoint: z.string().url().optional().or(z.literal("")),
-  apiKey: z.string().min(6),
+  apiKey: z.union([z.string().trim().min(6).max(500), z.literal("")]).optional(),
   activeModel: z.string().optional(),
   enabled: z.coerce.boolean().default(true),
 });
@@ -124,6 +124,7 @@ export const siteSettingsSchema = z.object({
   brandColor: z.string().min(4).max(20),
   themeMode: z.enum(["WHITE", "BLACK"]).default("WHITE"),
   fontFamily: z.enum(["CENTURY_GOTHIC", "TH_SARABUN_PSK", "PROMPT", "IMPACT"]).default("TH_SARABUN_PSK"),
+  headerLinks: z.string().max(2000).optional(),
   heroEyebrow: z.string().min(2).max(80),
   heroTitle: z.string().min(2).max(120),
   heroSubtitle: z.string().min(2).max(260),

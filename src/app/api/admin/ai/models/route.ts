@@ -19,10 +19,14 @@ export async function POST() {
   const endpoint = endpoints[settings.provider];
   if (!endpoint) return NextResponse.json({ error: "Missing custom endpoint" }, { status: 400 });
 
-  const headers: HeadersInit = settings.provider === "GEMINI"
+  const headers: Record<string, string> = settings.provider === "GEMINI"
     ? { "x-goog-api-key": apiKey }
     : { Authorization: `Bearer ${apiKey}` };
-  if (settings.provider === "ANTHROPIC") headers["anthropic-version"] = "2023-06-01";
+  if (settings.provider === "ANTHROPIC") {
+    headers["x-api-key"] = apiKey;
+    headers["anthropic-version"] = "2023-06-01";
+    delete headers.Authorization;
+  }
 
   const response = await fetch(endpoint, { headers, cache: "no-store" });
   if (!response.ok) return NextResponse.json({ error: "Provider rejected the request" }, { status: response.status });

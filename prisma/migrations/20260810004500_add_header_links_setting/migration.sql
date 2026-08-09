@@ -1,0 +1,2 @@
+ALTER TABLE "SiteSettings"
+ADD COLUMN "headerLinks" TEXT NOT NULL DEFAULT '';

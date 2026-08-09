@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { deleteProductAction, saveProductAction } from "@/app/actions";
+import { AiDescriptionButton } from "@/components/ai-description-button";
 import { ImageUploadField } from "@/components/image-upload-field";
 import { money } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -47,6 +48,7 @@ export default async function AdminProductsPage() {
                       {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
                     </select>
                     <ImageUploadField name="imageUrl" label="Product image" defaultValue={imageUrl} />
+                    <AiDescriptionButton />
                     <input name="youtubeUrl" defaultValue={youtubeUrl} placeholder="YouTube URL" className="h-10 rounded-md border border-black/10 bg-white px-3" />
                     <label className="flex items-center gap-2 text-sm"><input name="active" type="checkbox" defaultChecked={product.active} /> Active</label>
                     <button className="h-10 rounded-md bg-[#17201c] font-semibold text-white">Save changes</button>
@@ -72,6 +74,7 @@ export default async function AdminProductsPage() {
           {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
         </select>
         <ImageUploadField name="imageUrl" label="Product image" />
+        <AiDescriptionButton />
         <input name="youtubeUrl" placeholder="YouTube URL" className="h-10 rounded-md border border-black/10 px-3" />
         <label className="flex items-center gap-2 text-sm"><input name="active" type="checkbox" defaultChecked /> Active</label>
         <button className="h-10 rounded-md bg-[#17201c] font-semibold text-white">Save product</button>

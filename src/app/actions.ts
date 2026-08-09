@@ -292,16 +292,24 @@ export async function saveSmtpAction(formData: FormData) {
 
 export async function saveAiAction(formData: FormData) {
   const input = aiSchema.parse(Object.fromEntries(formData));
-  await prisma.aiSettings.deleteMany();
-  await prisma.aiSettings.create({
-    data: {
-      provider: input.provider,
-      customEndpoint: input.customEndpoint || null,
-      apiKeyCiphertext: encryptSecret(input.apiKey),
-      activeModel: input.activeModel || null,
-      enabled: input.enabled,
-    },
-  });
+  const current = await prisma.aiSettings.findFirst();
+  const apiKeyCiphertext = input.apiKey?.trim()
+    ? encryptSecret(input.apiKey.trim())
+    : current?.apiKeyCiphertext;
+
+  if (!apiKeyCiphertext) throw new Error("API key is required before saving AI settings.");
+
+  const data = {
+    provider: input.provider,
+    customEndpoint: input.customEndpoint || null,
+    apiKeyCiphertext,
+    activeModel: input.activeModel || null,
+    enabled: input.enabled,
+    models: current?.provider === input.provider ? current.models : [],
+  };
+
+  if (current) await prisma.aiSettings.update({ where: { id: current.id }, data });
+  else await prisma.aiSettings.create({ data });
   revalidatePath("/admin/settings/ai");
 }
 
@@ -315,6 +323,7 @@ export async function saveSiteSettingsAction(formData: FormData) {
     brandColor: input.brandColor,
     themeMode: input.themeMode,
     fontFamily: input.fontFamily,
+    headerLinks: input.headerLinks || "",
     heroEyebrow: input.heroEyebrow,
     heroTitle: input.heroTitle,
     heroSubtitle: input.heroSubtitle,
