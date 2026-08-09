@@ -26,6 +26,79 @@ textarea {
   outline-color: #0f766e;
 }
 
+button,
+a[class*="rounded-md"],
+a[class*="rounded-lg"],
+a[class*="rounded-full"] {
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    opacity 140ms ease;
+  will-change: transform;
+}
+
+button:not(:disabled),
+a[href][class*="rounded-md"],
+a[href][class*="rounded-lg"],
+a[href][class*="rounded-full"] {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) {
+  button:not(:disabled):hover,
+  a[href][class*="rounded-md"]:hover,
+  a[href][class*="rounded-lg"]:hover,
+  a[href][class*="rounded-full"]:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
+  }
+}
+
+button:not(:disabled):active,
+a[href][class*="rounded-md"]:active,
+a[href][class*="rounded-lg"]:active,
+a[href][class*="rounded-full"]:active {
+  transform: translateY(1px) scale(0.98);
+  box-shadow: 0 5px 12px rgba(15, 23, 42, 0.12);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 3px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  a[class*="rounded-md"],
+  a[class*="rounded-lg"],
+  a[class*="rounded-full"] {
+    transition: none;
+  }
+
+  button:not(:disabled):hover,
+  button:not(:disabled):active,
+  a[href][class*="rounded-md"]:hover,
+  a[href][class*="rounded-md"]:active,
+  a[href][class*="rounded-lg"]:hover,
+  a[href][class*="rounded-lg"]:active,
+  a[href][class*="rounded-full"]:hover,
+  a[href][class*="rounded-full"]:active {
+    transform: none;
+  }
+}
+
 .container-shell {
   width: min(1180px, calc(100% - 32px));
   margin-inline: auto;
