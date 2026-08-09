@@ -2,8 +2,8 @@ import Image from "next/image";
 import { checkoutAction } from "@/app/actions";
 import { SiteHeader } from "@/components/site-header";
 import { getCart } from "@/lib/cart";
-import { decryptSecret } from "@/lib/crypto";
 import { money } from "@/lib/format";
+import { readPaymentCredentials } from "@/lib/payments";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -15,12 +15,9 @@ type BankTransferCredentials = {
 };
 
 function bankTransferCredentials(credentials?: string | null): BankTransferCredentials | null {
-  if (!credentials) return null;
-  try {
-    return JSON.parse(decryptSecret(credentials)) as BankTransferCredentials;
-  } catch {
-    return null;
-  }
+  const parsed = readPaymentCredentials(credentials);
+  if (!parsed.bankName && !parsed.accountName && !parsed.qrCodeUrl) return null;
+  return parsed;
 }
 
 export default async function CheckoutPage() {

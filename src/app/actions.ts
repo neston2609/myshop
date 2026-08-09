@@ -2,11 +2,13 @@
 
 import { nanoid } from "nanoid";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { addCartItem, clearCart, getCart, updateCartItem } from "@/lib/cart";
 import { createSession, destroySession, findUserByEmail, findUserByIdentifier, getSession, hashPassword, verifyPassword } from "@/lib/auth";
 import { encryptSecret } from "@/lib/crypto";
 import { sanitizeProductHtml } from "@/lib/html";
+import { buildPayPalCredentials, buildStripeCredentials, createPayPalOrder, createStripeCheckoutSession, readPaymentCredentials } from "@/lib/payments";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/format";
 import {
@@ -26,6 +28,13 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 function formValue(formData: FormData, name: string) {
   return String(formData.get(name) || "");
+}
+
+async function requestOrigin() {
+  const requestHeaders = await headers();
+  const proto = requestHeaders.get("x-forwarded-proto") || "https";
+  const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "localhost:3000";
+  return `${proto}://${host}`;
 }
 
 export async function addToCartAction(formData: FormData) {
@@ -119,6 +128,7 @@ export async function checkoutAction(formData: FormData) {
         subtotal: cart.subtotal,
         shippingCost,
         total: cart.subtotal + shippingCost,
+        paymentStatus: paymentMethod.provider === "STRIPE" || paymentMethod.provider === "PAYPAL" ? "pending" : "manual",
         shippingMethodId: shippingMethod.id,
         paymentMethodId: paymentMethod.id,
         items: {
@@ -143,6 +153,50 @@ export async function checkoutAction(formData: FormData) {
 
     return created;
   });
+
+  if (paymentMethod.provider === "STRIPE") {
+    const paymentUrl = await createStripeCheckoutSession({
+      method: paymentMethod,
+      order: {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        customerEmail: order.customerEmail,
+        total: cart.subtotal + shippingCost,
+        shippingCost,
+        items: cart.items.map((item) => ({
+          name: item.product.name,
+          price: Number(item.product.price),
+          quantity: item.quantity,
+          total: item.lineTotal,
+        })),
+      },
+      origin: await requestOrigin(),
+    });
+    await clearCart();
+    redirect(paymentUrl);
+  }
+
+  if (paymentMethod.provider === "PAYPAL") {
+    const paymentUrl = await createPayPalOrder({
+      method: paymentMethod,
+      order: {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        customerEmail: order.customerEmail,
+        total: cart.subtotal + shippingCost,
+        shippingCost,
+        items: cart.items.map((item) => ({
+          name: item.product.name,
+          price: Number(item.product.price),
+          quantity: item.quantity,
+          total: item.lineTotal,
+        })),
+      },
+      origin: await requestOrigin(),
+    });
+    await clearCart();
+    redirect(paymentUrl);
+  }
 
   await clearCart();
   redirect(`/checkout/success?order=${order.orderNumber}`);
@@ -252,24 +306,58 @@ export async function saveShippingAction(formData: FormData) {
 }
 
 export async function savePaymentAction(formData: FormData) {
-  const input = paymentSchema.parse(Object.fromEntries(formData));
-  const credentials = input.provider === "BANK_TRANSFER"
-    ? JSON.stringify({
-        bankName: input.bankName?.trim(),
-        accountName: input.accountName?.trim(),
-        qrCodeUrl: input.qrCodeUrl || "",
-      })
-    : input.credentials;
+  const input = paymentSchema.parse({ ...Object.fromEntries(formData), enabled: formData.has("enabled") });
+  const id = formValue(formData, "id");
+  const current = id ? await prisma.paymentMethod.findUnique({ where: { id } }) : null;
+  const existingCredentials = readPaymentCredentials(current?.credentialsCiphertext);
+  let credentials: Record<string, string> | null = null;
 
-  await prisma.paymentMethod.create({
-    data: {
-      name: input.name,
-      provider: input.provider,
-      enabled: input.enabled,
-      credentialsCiphertext: credentials ? encryptSecret(credentials) : null,
-    },
+  if (input.provider === "BANK_TRANSFER") {
+    credentials = {
+      bankName: input.bankName?.trim() || "",
+      accountName: input.accountName?.trim() || "",
+      qrCodeUrl: input.qrCodeUrl || existingCredentials.qrCodeUrl || "",
+    };
+  } else if (input.provider === "STRIPE") {
+    credentials = buildStripeCredentials(input, existingCredentials);
+    if (!credentials.secretKey) throw new Error("Stripe secret key is required.");
+  } else if (input.provider === "PAYPAL") {
+    credentials = buildPayPalCredentials(input, existingCredentials);
+    if (!credentials.clientId || !credentials.clientSecret) throw new Error("PayPal client ID and secret are required.");
+  } else if (input.provider === "CUSTOM") {
+    credentials = { raw: input.credentials?.trim() || existingCredentials.raw || "" };
+  }
+
+  const data = {
+    name: input.name,
+    provider: input.provider,
+    enabled: input.enabled,
+    credentialsCiphertext: credentials ? encryptSecret(JSON.stringify(credentials)) : null,
+  };
+
+  if (current) await prisma.paymentMethod.update({ where: { id: current.id }, data });
+  else await prisma.paymentMethod.create({ data });
+  revalidatePath("/admin/payments");
+  revalidatePath("/checkout");
+}
+
+export async function togglePaymentAction(formData: FormData) {
+  const id = formValue(formData, "id");
+  if (!id) return;
+  await prisma.paymentMethod.update({
+    where: { id },
+    data: { enabled: formValue(formData, "enabled") === "true" },
   });
   revalidatePath("/admin/payments");
+  revalidatePath("/checkout");
+}
+
+export async function deletePaymentAction(formData: FormData) {
+  const id = formValue(formData, "id");
+  if (!id) return;
+  await prisma.paymentMethod.delete({ where: { id } });
+  revalidatePath("/admin/payments");
+  revalidatePath("/checkout");
 }
 
 export async function saveSmtpAction(formData: FormData) {

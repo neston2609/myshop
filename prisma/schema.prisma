@@ -130,6 +130,8 @@ model Order {
   status           OrderStatus     @default(PENDING)
   paymentMethodId  String?
   paymentMethod    PaymentMethod?  @relation(fields: [paymentMethodId], references: [id])
+  paymentReference String?
+  paymentStatus    String?
   shippingMethodId String?
   shippingMethod   ShippingMethod? @relation(fields: [shippingMethodId], references: [id])
   items            OrderItem[]

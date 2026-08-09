@@ -80,16 +80,21 @@ export const paymentSchema = z.object({
   bankName: z.string().max(100).optional(),
   accountName: z.string().max(140).optional(),
   qrCodeUrl: z.string().optional(),
+  stripeSecretKey: z.string().optional(),
+  stripePublishableKey: z.string().optional(),
+  stripeWebhookSecret: z.string().optional(),
+  paypalClientId: z.string().optional(),
+  paypalClientSecret: z.string().optional(),
+  paypalEnvironment: z.enum(["sandbox", "live"]).default("sandbox"),
 }).superRefine((input, context) => {
-  if (input.provider !== "BANK_TRANSFER") return;
-  if (!input.bankName?.trim()) {
+  if (input.provider === "BANK_TRANSFER" && !input.bankName?.trim()) {
     context.addIssue({
       code: "custom",
       message: "Bank name is required",
       path: ["bankName"],
     });
   }
-  if (!input.accountName?.trim()) {
+  if (input.provider === "BANK_TRANSFER" && !input.accountName?.trim()) {
     context.addIssue({
       code: "custom",
       message: "Account name is required",
