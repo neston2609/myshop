@@ -213,6 +213,9 @@ model SiteSettings {
   brandColor   String   @default("#111827")
   themeMode    String   @default("WHITE")
   fontFamily   String   @default("TH_SARABUN_PSK")
+  heroEyebrow  String   @default("Minimal commerce, ready to grow")
+  heroTitle    String   @default("Shop essentials with a calmer checkout.")
+  heroSubtitle String   @default("A modern storefront with guest checkout, customer accounts, secure admin controls, uploads, SMTP, payments, and AI configuration.")
   supportEmail String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

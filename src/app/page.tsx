@@ -7,6 +7,12 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
+const defaultHero = {
+  eyebrow: "Minimal commerce, ready to grow",
+  title: "Shop essentials with a calmer checkout.",
+  subtitle: "A modern storefront with guest checkout, customer accounts, secure admin controls, uploads, SMTP, payments, and AI configuration.",
+};
+
 export default async function Home() {
   const [products, categories, settings] = await Promise.all([
     prisma.product.findMany({
@@ -23,6 +29,11 @@ export default async function Home() {
     }),
     prisma.siteSettings.findFirst(),
   ]);
+  const hero = {
+    eyebrow: settings?.heroEyebrow || defaultHero.eyebrow,
+    title: settings?.heroTitle || defaultHero.title,
+    subtitle: settings?.heroSubtitle || defaultHero.subtitle,
+  };
 
   return (
     <>
@@ -30,7 +41,7 @@ export default async function Home() {
       <main>
         <section className="overflow-hidden border-b border-[var(--border)] bg-[var(--page)]">
           <div className="container-shell grid gap-10 py-10 lg:grid-cols-[410px_minmax(0,1fr)] lg:items-center lg:gap-14 lg:py-14 xl:gap-16">
-            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-5 soft-shadow sm:p-7">
+            <div className="p-0">
               <div className="relative mx-auto aspect-square w-full max-w-[330px] overflow-hidden">
                 {settings?.logoUrl ? (
                   <Image
@@ -78,13 +89,13 @@ export default async function Home() {
             </div>
             <div className="flex flex-col py-2 lg:py-10">
               <p className="text-sm font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">
-                Minimal commerce, ready to grow
+                {hero.eyebrow}
               </p>
               <h1 className="mt-7 max-w-[590px] text-5xl font-semibold leading-[1.04] text-[var(--text)] md:text-7xl">
-                Shop essentials with a calmer checkout.
+                {hero.title}
               </h1>
               <p className="mt-7 max-w-xl text-lg leading-8 text-[var(--muted)]">
-                A modern storefront with guest checkout, customer accounts, secure admin controls, uploads, SMTP, payments, and AI configuration.
+                {hero.subtitle}
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link href="/shop" className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[var(--text)] px-5 font-semibold text-[var(--surface)]">

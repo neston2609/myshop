@@ -8,6 +8,9 @@ export default async function AdminSettingsPage() {
     prisma.shippingMethod.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.siteSettings.findFirst(),
   ]);
+  const defaultHeroEyebrow = "Minimal commerce, ready to grow";
+  const defaultHeroTitle = "Shop essentials with a calmer checkout.";
+  const defaultHeroSubtitle = "A modern storefront with guest checkout, customer accounts, secure admin controls, uploads, SMTP, payments, and AI configuration.";
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
@@ -36,6 +39,12 @@ export default async function AdminSettingsPage() {
                 <option value="IMPACT">Impact</option>
               </select>
             </label>
+          </div>
+          <div className="grid gap-3 border-t border-black/10 pt-4">
+            <h3 className="text-sm font-semibold">Homepage hero text</h3>
+            <input name="heroEyebrow" defaultValue={site?.heroEyebrow || defaultHeroEyebrow} placeholder="Small title above hero" required className="h-10 rounded-md border border-black/10 px-3" />
+            <input name="heroTitle" defaultValue={site?.heroTitle || defaultHeroTitle} placeholder="Main title" required className="h-10 rounded-md border border-black/10 px-3" />
+            <textarea name="heroSubtitle" defaultValue={site?.heroSubtitle || defaultHeroSubtitle} placeholder="Subtitle" required rows={3} className="rounded-md border border-black/10 px-3 py-2" />
           </div>
           <button className="h-10 w-fit rounded-md bg-[#17201c] px-4 font-semibold text-white">Save branding</button>
         </form>

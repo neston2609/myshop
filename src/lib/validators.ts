@@ -124,5 +124,8 @@ export const siteSettingsSchema = z.object({
   brandColor: z.string().min(4).max(20),
   themeMode: z.enum(["WHITE", "BLACK"]).default("WHITE"),
   fontFamily: z.enum(["CENTURY_GOTHIC", "TH_SARABUN_PSK", "PROMPT", "IMPACT"]).default("TH_SARABUN_PSK"),
+  heroEyebrow: z.string().min(2).max(80),
+  heroTitle: z.string().min(2).max(120),
+  heroSubtitle: z.string().min(2).max(260),
   supportEmail: z.string().email().optional().or(z.literal("")),
 });
