@@ -48,3 +48,6 @@ next-env.d.ts
 .windsurf/
 AGENTS.md
 CLAUDE.md
+
+# runtime uploads
+/public/uploads/
