@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import { addToCartAction } from "@/app/actions";
 import { money } from "@/lib/format";
+import { plainTextFromHtml } from "@/lib/html";
 
 type ProductCardProps = {
   product: {
@@ -19,6 +20,7 @@ type ProductCardProps = {
 
 export function ProductCard({ product }: ProductCardProps) {
   const image = product.media.find((item) => item.type === "IMAGE")?.url || "/window.svg";
+  const description = plainTextFromHtml(product.description);
 
   return (
     <article className="group overflow-hidden rounded-lg border border-black/10 bg-white">
@@ -39,7 +41,7 @@ export function ProductCard({ product }: ProductCardProps) {
           <Link href={`/products/${product.slug}`} className="block font-semibold text-slate-950">
             {product.name}
           </Link>
-          <p className="line-clamp-2 text-sm leading-6 text-slate-600">{product.description}</p>
+          <p className="line-clamp-2 text-sm leading-6 text-slate-600">{description}</p>
         </div>
         <div className="flex items-center justify-between gap-3">
           <span className="font-semibold">{money(product.price)}</span>

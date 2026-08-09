@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { addToCartAction } from "@/app/actions";
 import { SiteHeader } from "@/components/site-header";
 import { money, youtubeEmbed } from "@/lib/format";
+import { sanitizeProductHtml } from "@/lib/html";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const images = product.media.filter((item) => item.type === "IMAGE");
   const video = product.media.find((item) => item.type === "YOUTUBE" || item.type === "VIDEO");
   const embed = video?.type === "YOUTUBE" ? youtubeEmbed(video.url) : null;
+  const descriptionHtml = sanitizeProductHtml(product.description);
 
   return (
     <>
@@ -61,7 +63,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
             </Link>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight">{product.name}</h1>
             <p className="mt-4 text-2xl font-semibold">{money(product.price)}</p>
-            <p className="mt-5 leading-8 text-slate-600">{product.description}</p>
+            <div className="product-html mt-5" dangerouslySetInnerHTML={{ __html: descriptionHtml }} />
             <dl className="mt-6 grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-md bg-slate-100 p-3"><dt className="text-slate-500">SKU</dt><dd className="font-semibold">{product.sku}</dd></div>
               <div className="rounded-md bg-slate-100 p-3"><dt className="text-slate-500">Stock</dt><dd className="font-semibold">{product.stock}</dd></div>

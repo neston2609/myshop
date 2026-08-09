@@ -218,3 +218,85 @@ button:disabled {
 .soft-shadow {
   box-shadow: var(--shadow-soft);
 }
+
+.product-html {
+  color: var(--muted);
+  line-height: 1.85;
+}
+
+.product-html > * + * {
+  margin-top: 1rem;
+}
+
+.product-html h2,
+.product-html h3,
+.product-html h4 {
+  color: var(--text);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.product-html h2 {
+  font-size: 1.5rem;
+}
+
+.product-html h3 {
+  font-size: 1.25rem;
+}
+
+.product-html strong,
+.product-html b {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.product-html a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.product-html ul,
+.product-html ol {
+  padding-left: 1.25rem;
+}
+
+.product-html ul {
+  list-style: disc;
+}
+
+.product-html ol {
+  list-style: decimal;
+}
+
+.product-html blockquote {
+  border-left: 3px solid var(--accent);
+  color: var(--text);
+  padding-left: 1rem;
+}
+
+.product-html table {
+  border-collapse: collapse;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  width: 100%;
+}
+
+.product-html th,
+.product-html td {
+  border: 1px solid var(--border);
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+}
+
+.product-html th {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.product-html img {
+  border-radius: 0.5rem;
+  height: auto;
+  max-width: 100%;
+}

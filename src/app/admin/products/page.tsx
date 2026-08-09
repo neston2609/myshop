@@ -37,7 +37,7 @@ export default async function AdminProductsPage() {
                   <form action={saveProductAction} className="grid gap-3">
                     <input type="hidden" name="id" value={product.id} />
                     <input name="name" defaultValue={product.name} placeholder="Name" required className="h-10 rounded-md border border-black/10 bg-white px-3" />
-                    <textarea name="description" defaultValue={product.description} placeholder="Description" required className="min-h-24 rounded-md border border-black/10 bg-white px-3 py-2" />
+                    <textarea name="description" defaultValue={product.description} placeholder="<p>Product details...</p>" required className="min-h-36 rounded-md border border-black/10 bg-white px-3 py-2 font-mono text-xs leading-6" />
                     <div className="grid gap-3 sm:grid-cols-3">
                       <input name="sku" defaultValue={product.sku} placeholder="SKU" required className="h-10 rounded-md border border-black/10 bg-white px-3" />
                       <input name="price" defaultValue={product.price.toString()} type="number" step="0.01" placeholder="Price" required className="h-10 rounded-md border border-black/10 bg-white px-3" />
@@ -64,7 +64,7 @@ export default async function AdminProductsPage() {
       <form action={saveProductAction} className="grid h-fit gap-3 rounded-lg border border-black/10 bg-white p-5">
         <h2 className="font-semibold">Add product</h2>
         <input name="name" placeholder="Name" required className="h-10 rounded-md border border-black/10 px-3" />
-        <textarea name="description" placeholder="Description" required className="min-h-24 rounded-md border border-black/10 px-3 py-2" />
+        <textarea name="description" placeholder="<p>Product details...</p>" required className="min-h-36 rounded-md border border-black/10 px-3 py-2 font-mono text-xs leading-6" />
         <input name="sku" placeholder="SKU" required className="h-10 rounded-md border border-black/10 px-3" />
         <input name="price" type="number" step="0.01" placeholder="Price" required className="h-10 rounded-md border border-black/10 px-3" />
         <input name="stock" type="number" placeholder="Stock" required className="h-10 rounded-md border border-black/10 px-3" />

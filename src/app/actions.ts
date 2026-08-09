@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { addCartItem, clearCart, getCart, updateCartItem } from "@/lib/cart";
 import { createSession, destroySession, findUserByEmail, findUserByIdentifier, getSession, hashPassword, verifyPassword } from "@/lib/auth";
 import { encryptSecret } from "@/lib/crypto";
+import { sanitizeProductHtml } from "@/lib/html";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/format";
 import {
@@ -154,7 +155,7 @@ export async function saveProductAction(formData: FormData) {
   const data = {
     name: input.name,
     slug,
-    description: input.description,
+    description: sanitizeProductHtml(input.description),
     price: input.price,
     sku: input.sku,
     stock: input.stock,
@@ -174,6 +175,7 @@ export async function saveProductAction(formData: FormData) {
   if (media.length) await prisma.productMedia.createMany({ data: media });
   revalidatePath("/admin/products");
   revalidatePath("/shop");
+  revalidatePath(`/products/${product.slug}`);
   revalidatePath("/");
 }
 
