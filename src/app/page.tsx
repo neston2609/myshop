@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Package, ShieldCheck, Sparkles, Truck } from "lucide-react";
-import { SiteHeader } from "@/components/site-header";
 import { ProductCard } from "@/components/product-card";
 import { prisma } from "@/lib/prisma";
 
@@ -26,10 +25,9 @@ export default async function Home() {
 
   return (
     <>
-      <SiteHeader />
       <main>
         <section className="overflow-hidden border-b border-black/10 bg-white">
-          <div className="container-shell grid gap-10 py-4 lg:grid-cols-[370px_minmax(0,1fr)] lg:gap-16 lg:py-0">
+          <div className="mx-auto grid w-[min(1180px,calc(100%-32px))] gap-10 py-4 sm:w-[min(1180px,calc(100%-64px))] lg:w-[min(1180px,calc(100%-104px))] lg:grid-cols-[370px_minmax(0,1fr)] lg:gap-12 lg:py-0 xl:gap-16">
             <div className="relative min-h-[500px] pb-8 pt-3 sm:min-h-[540px] lg:min-h-[560px]">
               <div className="absolute bottom-0 left-[-32px] right-[-32px] top-[318px] bg-black lg:left-[calc((1180px-100vw)/2)] lg:right-0" />
               <div className="relative z-10 flex aspect-square w-full max-w-[320px] items-center justify-center overflow-hidden rounded-lg border border-black/10 bg-white p-5 soft-shadow sm:max-w-[340px]">
@@ -56,7 +54,7 @@ export default async function Home() {
                 {categories.map((category) => (
                   <Link
                     key={category.id}
-                    href={`/shop?category=${category.slug}`}
+                    href={category.slug ? `/shop?category=${category.slug}` : "/shop"}
                     className="group grid min-h-[72px] grid-cols-[56px_1fr_24px] items-center gap-3 rounded-md border border-white/15 bg-white/8 p-2 text-white backdrop-blur"
                   >
                     <span className="relative h-14 w-14 overflow-hidden rounded-md bg-white/12">
@@ -77,7 +75,7 @@ export default async function Home() {
                 ))}
               </div>
             </div>
-            <div className="flex flex-col justify-center pb-12 pt-2 lg:min-h-[560px] lg:pb-14 lg:pt-10">
+            <div className="flex flex-col pb-12 pt-2 lg:min-h-[560px] lg:pb-14 lg:pt-10">
               <p className="text-sm font-semibold uppercase tracking-[0.32em] text-[#007275]">
                 Minimal commerce, ready to grow
               </p>
