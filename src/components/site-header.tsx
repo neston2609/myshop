@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Package, Search, ShoppingBag, UserRound } from "lucide-react";
 import { getCart } from "@/lib/cart";
 import { getSession } from "@/lib/auth";
@@ -15,9 +16,15 @@ export async function SiteHeader() {
     <header className="border-b border-black/10 bg-white/90 backdrop-blur">
       <div className="container-shell flex h-16 items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-3 font-semibold tracking-tight">
-          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#17201c] text-white">
-            <Package size={19} />
-          </span>
+          {settings?.logoUrl ? (
+            <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-black/10 bg-white">
+              <Image src={settings.logoUrl} alt={`${settings.shopName} logo`} width={40} height={40} className="h-full w-full object-contain" />
+            </span>
+          ) : (
+            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#17201c] text-white">
+              <Package size={19} />
+            </span>
+          )}
           <span>{settings?.shopName || "MyShop"}</span>
         </Link>
         <nav className="hidden items-center gap-6 text-sm text-slate-700 md:flex">
