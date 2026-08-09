@@ -117,7 +117,7 @@ export const smtpSchema = z.object({
 export const aiSchema = z.object({
   provider: z.enum(["OPENAI", "ANTHROPIC", "GEMINI", "OPENROUTER", "CUSTOM"]),
   customEndpoint: z.string().url().optional().or(z.literal("")),
-  apiKey: z.union([z.string().trim().min(6).max(500), z.literal("")]).optional(),
+  apiKey: z.union([z.string().trim().min(6).max(20000), z.literal("")]).optional(),
   activeModel: z.string().optional(),
   enabled: z.coerce.boolean().default(true),
 });

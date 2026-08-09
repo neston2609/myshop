@@ -293,16 +293,37 @@ export async function deleteCategoryAction(formData: FormData) {
 }
 
 export async function saveShippingAction(formData: FormData) {
-  const input = shippingSchema.parse(Object.fromEntries(formData));
-  await prisma.shippingMethod.create({
-    data: {
-      name: input.name,
-      regions: input.regions.split(",").map((item) => item.trim()).filter(Boolean),
-      cost: input.cost,
-      enabled: input.enabled,
-    },
+  const input = shippingSchema.parse({ ...Object.fromEntries(formData), enabled: formData.has("enabled") });
+  const id = formValue(formData, "id");
+  const data = {
+    name: input.name,
+    regions: input.regions.split(",").map((item) => item.trim()).filter(Boolean),
+    cost: input.cost,
+    enabled: input.enabled,
+  };
+  if (id) await prisma.shippingMethod.update({ where: { id }, data });
+  else await prisma.shippingMethod.create({ data });
+  revalidatePath("/admin/shipping");
+  revalidatePath("/checkout");
+}
+
+export async function toggleShippingAction(formData: FormData) {
+  const id = formValue(formData, "id");
+  if (!id) return;
+  await prisma.shippingMethod.update({
+    where: { id },
+    data: { enabled: formValue(formData, "enabled") === "true" },
   });
-  revalidatePath("/admin/settings");
+  revalidatePath("/admin/shipping");
+  revalidatePath("/checkout");
+}
+
+export async function deleteShippingAction(formData: FormData) {
+  const id = formValue(formData, "id");
+  if (!id) return;
+  await prisma.shippingMethod.delete({ where: { id } });
+  revalidatePath("/admin/shipping");
+  revalidatePath("/checkout");
 }
 
 export async function savePaymentAction(formData: FormData) {

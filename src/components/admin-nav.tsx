@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { Boxes, CreditCard, LayoutDashboard, Mail, PackagePlus, Settings, Truck, Users } from "lucide-react";
+import { Boxes, CreditCard, LayoutDashboard, Mail, PackagePlus, ReceiptText, Settings, Truck, Users } from "lucide-react";
 
 const items = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/products", label: "Products", icon: PackagePlus },
   { href: "/admin/categories", label: "Categories", icon: Boxes },
-  { href: "/admin/orders", label: "Orders", icon: Truck },
+  { href: "/admin/orders", label: "Orders", icon: ReceiptText },
   { href: "/admin/customers", label: "Customers", icon: Users },
+  { href: "/admin/shipping", label: "Shipping", icon: Truck },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/settings", label: "Settings", icon: Settings },
   { href: "/admin/settings/smtp", label: "SMTP", icon: Mail },

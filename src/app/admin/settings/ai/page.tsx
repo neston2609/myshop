@@ -1,4 +1,5 @@
 import { saveAiAction } from "@/app/actions";
+import { AiCredentialField } from "@/components/ai-credential-field";
 import { AiSettingsTools } from "@/components/ai-settings-tools";
 import { prisma } from "@/lib/prisma";
 
@@ -19,13 +20,7 @@ export default async function AiSettingsPage() {
           <option value="CUSTOM">Custom</option>
         </select>
         <input name="customEndpoint" defaultValue={settings?.customEndpoint || ""} placeholder="Custom chat endpoint for custom provider" className="h-10 rounded-md border border-black/10 px-3" />
-        <input
-          name="apiKey"
-          type="password"
-          placeholder={settings ? "API key (leave blank to keep current key)" : "API key"}
-          required={!settings}
-          className="h-10 rounded-md border border-black/10 px-3"
-        />
+        <AiCredentialField configured={Boolean(settings)} />
         <select name="activeModel" defaultValue={settings?.activeModel || ""} className="h-10 rounded-md border border-black/10 px-3">
           <option value="">Use default or select after fetching models</option>
           {settings?.models.map((model) => <option key={model} value={model}>{model}</option>)}

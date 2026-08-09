@@ -1,4 +1,5 @@
 import type { AiProvider } from "@prisma/client";
+import { SignJWT, importPKCS8 } from "jose";
 import { decryptSecret } from "@/lib/crypto";
 import { prisma } from "@/lib/prisma";
 
@@ -17,6 +18,14 @@ type AiSettingsForGeneration = {
   enabled: boolean;
 };
 
+type GoogleServiceAccount = {
+  type?: string;
+  project_id?: string;
+  private_key?: string;
+  client_email?: string;
+  token_uri?: string;
+};
+
 const defaultModels: Record<AiProvider, string> = {
   OPENAI: "gpt-4o-mini",
   ANTHROPIC: "claude-3-5-haiku-latest",
@@ -25,8 +34,58 @@ const defaultModels: Record<AiProvider, string> = {
   CUSTOM: "gpt-4o-mini",
 };
 
+const geminiVertexLocation = "us-central1";
+
 function getModel(settings: AiSettingsForGeneration) {
   return settings.activeModel || settings.models[0] || defaultModels[settings.provider];
+}
+
+export function parseGoogleServiceAccount(value: string): GoogleServiceAccount | null {
+  try {
+    const parsed = JSON.parse(value) as GoogleServiceAccount;
+    if (parsed.type !== "service_account" || !parsed.project_id || !parsed.private_key || !parsed.client_email) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+async function getGoogleAccessToken(serviceAccount: GoogleServiceAccount) {
+  if (!serviceAccount.client_email || !serviceAccount.private_key || !serviceAccount.project_id) {
+    throw new Error("Invalid Google service account credential.");
+  }
+
+  const tokenUri = serviceAccount.token_uri || "https://oauth2.googleapis.com/token";
+  const now = Math.floor(Date.now() / 1000);
+  const key = await importPKCS8(serviceAccount.private_key, "RS256");
+  const assertion = await new SignJWT({
+    iss: serviceAccount.client_email,
+    scope: "https://www.googleapis.com/auth/cloud-platform",
+    aud: tokenUri,
+    iat: now,
+    exp: now + 3600,
+  })
+    .setProtectedHeader({ alg: "RS256", typ: "JWT" })
+    .sign(key);
+
+  const response = await fetch(tokenUri, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion,
+    }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) throw new Error(`Google OAuth token request failed (${response.status}).`);
+  const data = await response.json();
+  if (!data.access_token) throw new Error("Google OAuth did not return an access token.");
+  return String(data.access_token);
+}
+
+function vertexModelName(model: string) {
+  return model.replace(/^models\//, "").replace(/^publishers\/google\/models\//, "");
 }
 
 function getOpenAiCompatibleEndpoint(settings: AiSettingsForGeneration) {
@@ -107,6 +166,36 @@ async function generateAnthropicText(settings: AiSettingsForGeneration, input: A
 }
 
 async function generateGeminiText(settings: AiSettingsForGeneration, input: AiGenerateInput, apiKey: string) {
+  const serviceAccount = parseGoogleServiceAccount(apiKey);
+  if (serviceAccount) {
+    const accessToken = await getGoogleAccessToken(serviceAccount);
+    const model = vertexModelName(getModel(settings));
+    const endpoint = `https://${geminiVertexLocation}-aiplatform.googleapis.com/v1/projects/${serviceAccount.project_id}/locations/${geminiVertexLocation}/publishers/google/models/${model}:generateContent`;
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: input.prompt }] }],
+        generationConfig: {
+          maxOutputTokens: input.maxTokens || 700,
+        },
+      }),
+      cache: "no-store",
+    });
+
+    if (!response.ok) throw new Error(`Google Vertex AI rejected the request (${response.status}).`);
+    const data = await response.json();
+    const text = (data?.candidates?.[0]?.content?.parts || [])
+      .map((part: { text?: string }) => part.text || "")
+      .join("")
+      .trim();
+    if (!text) throw new Error("Google Vertex AI returned an empty response.");
+    return text;
+  }
+
   const model = getModel(settings).replace(/^models\//, "");
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const response = await fetch(endpoint, {
@@ -130,6 +219,26 @@ async function generateGeminiText(settings: AiSettingsForGeneration, input: AiGe
     .trim();
   if (!text) throw new Error("AI provider returned an empty response.");
   return text;
+}
+
+export async function fetchGeminiModels(rawCredential: string) {
+  const serviceAccount = parseGoogleServiceAccount(rawCredential);
+  if (!serviceAccount) return null;
+
+  const accessToken = await getGoogleAccessToken(serviceAccount);
+  const response = await fetch(
+    `https://${geminiVertexLocation}-aiplatform.googleapis.com/v1/projects/${serviceAccount.project_id}/locations/${geminiVertexLocation}/publishers/google/models`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) throw new Error(`Google Vertex AI model fetch failed (${response.status}).`);
+  const data = await response.json();
+  return ((data.publisherModels || data.models || []) as Array<{ name?: string; displayName?: string }>)
+    .map((model) => model.name?.split("/").pop() || model.displayName)
+    .filter(Boolean) as string[];
 }
 
 export async function generateAiText(input: AiGenerateInput) {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
+import { fetchGeminiModels } from "@/lib/ai";
 import { decryptSecret } from "@/lib/crypto";
 import { prisma } from "@/lib/prisma";
 
@@ -9,6 +10,20 @@ export async function POST() {
   if (!settings) return NextResponse.json({ error: "AI settings not configured" }, { status: 400 });
 
   const apiKey = decryptSecret(settings.apiKeyCiphertext);
+  if (settings.provider === "GEMINI") {
+    let vertexModels: string[] | null = null;
+    try {
+      vertexModels = await fetchGeminiModels(apiKey);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not fetch Gemini models.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+    if (vertexModels) {
+      await prisma.aiSettings.update({ where: { id: settings.id }, data: { models: vertexModels } });
+      return NextResponse.json({ models: vertexModels });
+    }
+  }
+
   const endpoints: Record<string, string> = {
     OPENAI: "https://api.openai.com/v1/models",
     ANTHROPIC: "https://api.anthropic.com/v1/models",

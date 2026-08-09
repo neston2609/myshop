@@ -38,11 +38,13 @@ export function AiDescriptionButton() {
             body: JSON.stringify({ name, imageUrl }),
           });
           const data = await response.json().catch(() => ({}));
-          if (!response.ok) throw new Error(data.error || "Could not generate description.");
+        if (!response.ok) throw new Error(data.error || "Could not generate description.");
 
-          descriptionField.value = data.description || "";
-          descriptionField.dispatchEvent(new Event("input", { bubbles: true }));
-          setState({ kind: "success", message: "Description generated. Review it before saving." });
+        descriptionField.value = data.description || "";
+        descriptionField.dispatchEvent(new Event("input", { bubbles: true }));
+        const visualEditor = form.querySelector<HTMLDivElement>("[data-rich-html-editor]");
+        if (visualEditor) visualEditor.innerHTML = data.description || "";
+        setState({ kind: "success", message: "Description generated. Review it before saving." });
         } catch (error) {
           setState({ kind: "error", message: error instanceof Error ? error.message : "Could not generate description." });
         }
