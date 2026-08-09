@@ -315,6 +315,7 @@ export async function saveSiteSettingsAction(formData: FormData) {
   };
   if (current) await prisma.siteSettings.update({ where: { id: current.id }, data });
   else await prisma.siteSettings.create({ data });
+  revalidatePath("/", "layout");
   revalidatePath("/");
   revalidatePath("/admin/settings");
 }
