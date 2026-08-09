@@ -79,7 +79,7 @@ export default async function Home() {
               <p className="text-sm font-semibold uppercase tracking-[0.32em] text-[#007275]">
                 Minimal commerce, ready to grow
               </p>
-              <h1 className="mt-8 max-w-3xl text-5xl font-semibold leading-[1.04] tracking-tight text-slate-950 md:text-7xl">
+              <h1 className="mt-8 max-w-[560px] text-5xl font-semibold leading-[1.04] tracking-tight text-slate-950 md:text-7xl">
                 Shop essentials with a calmer checkout.
               </h1>
               <p className="mt-8 max-w-xl text-lg leading-8 text-slate-600">
