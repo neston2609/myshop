@@ -9,6 +9,7 @@ const cookieName = "myshop_session";
 export type SessionUser = {
   id: string;
   name: string;
+  username: string | null;
   email: string;
   role: "CUSTOMER" | "ADMIN";
 };
@@ -57,6 +58,7 @@ export async function getSession(): Promise<SessionUser | null> {
     return {
       id: String(payload.id),
       name: String(payload.name),
+      username: payload.username ? String(payload.username) : null,
       email: String(payload.email),
       role: payload.role === "ADMIN" ? "ADMIN" : "CUSTOMER",
     };
@@ -80,5 +82,17 @@ export async function requireAdmin() {
 export async function findUserByEmail(email: string) {
   return prisma.user.findUnique({
     where: { email: email.toLowerCase() },
+  });
+}
+
+export async function findUserByIdentifier(identifier: string) {
+  const value = identifier.toLowerCase();
+  return prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: value },
+        { username: value },
+      ],
+    },
   });
 }

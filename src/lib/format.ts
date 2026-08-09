@@ -1,8 +1,8 @@
 export function money(value: number | { toString(): string }) {
   const amount = typeof value === "number" ? value : Number(value.toString());
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("th-TH", {
     style: "currency",
-    currency: "USD",
+    currency: "THB",
   }).format(amount);
 }
 

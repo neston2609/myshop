@@ -4,12 +4,13 @@ import { nanoid } from "nanoid";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { addCartItem, clearCart, getCart, updateCartItem } from "@/lib/cart";
-import { createSession, destroySession, findUserByEmail, getSession, hashPassword, verifyPassword } from "@/lib/auth";
+import { createSession, destroySession, findUserByEmail, findUserByIdentifier, getSession, hashPassword, verifyPassword } from "@/lib/auth";
 import { encryptSecret } from "@/lib/crypto";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/format";
 import {
   aiSchema,
+  changePasswordSchema,
   categorySchema,
   checkoutSchema,
   loginSchema,
@@ -38,33 +39,55 @@ export async function updateCartAction(formData: FormData) {
 
 export async function registerAction(formData: FormData) {
   const input = registerSchema.parse(Object.fromEntries(formData));
+  const username = input.username ? input.username.toLowerCase() : null;
   const existing = await findUserByEmail(input.email);
   if (existing) redirect("/login?message=account-exists");
+  if (username) {
+    const usernameTaken = await prisma.user.findUnique({ where: { username } });
+    if (usernameTaken) redirect("/register?message=username-taken");
+  }
   const user = await prisma.user.create({
     data: {
       name: input.name,
+      username,
       email: input.email,
       passwordHash: await hashPassword(input.password),
     },
   });
-  await createSession({ id: user.id, name: user.name, email: user.email, role: user.role });
+  await createSession({ id: user.id, name: user.name, username: user.username, email: user.email, role: user.role });
   redirect("/account");
 }
 
 export async function loginAction(formData: FormData) {
   const input = loginSchema.parse(Object.fromEntries(formData));
-  if (!checkRateLimit(`login:${input.email}`)) redirect("/login?message=rate-limited");
-  const user = await findUserByEmail(input.email);
+  if (!checkRateLimit(`login:${input.identifier.toLowerCase()}`)) redirect("/login?message=rate-limited");
+  const user = await findUserByIdentifier(input.identifier);
   if (!user || !(await verifyPassword(input.password, user.passwordHash))) {
     redirect("/login?message=invalid");
   }
-  await createSession({ id: user.id, name: user.name, email: user.email, role: user.role });
+  await createSession({ id: user.id, name: user.name, username: user.username, email: user.email, role: user.role });
   redirect(user.role === "ADMIN" ? "/admin" : "/account");
 }
 
 export async function logoutAction() {
   await destroySession();
   redirect("/");
+}
+
+export async function changePasswordAction(formData: FormData) {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  const input = changePasswordSchema.parse(Object.fromEntries(formData));
+  const user = await prisma.user.findUnique({ where: { id: session.id } });
+  if (!user || !(await verifyPassword(input.currentPassword, user.passwordHash))) {
+    redirect("/account?message=password-invalid");
+  }
+
+  await prisma.user.update({
+    where: { id: session.id },
+    data: { passwordHash: await hashPassword(input.newPassword) },
+  });
+  redirect("/account?message=password-changed");
 }
 
 export async function checkoutAction(formData: FormData) {

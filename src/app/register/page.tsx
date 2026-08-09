@@ -2,7 +2,16 @@ import Link from "next/link";
 import { registerAction } from "@/app/actions";
 import { SiteHeader } from "@/components/site-header";
 
-export default function RegisterPage() {
+type RegisterPageProps = {
+  searchParams: Promise<{ message?: string }>;
+};
+
+export default async function RegisterPage({ searchParams }: RegisterPageProps) {
+  const params = await searchParams;
+  const message = {
+    "username-taken": "That username is already in use.",
+  }[params.message || ""];
+
   return (
     <>
       <SiteHeader />
@@ -12,7 +21,9 @@ export default function RegisterPage() {
             <h1 className="text-3xl font-semibold">Create account</h1>
             <p className="mt-2 text-sm text-slate-600">Save details and view your order history.</p>
           </div>
+          {message ? <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{message}</p> : null}
           <input name="name" placeholder="Name" required className="h-11 rounded-md border border-black/10 px-3" />
+          <input name="username" placeholder="Username" className="h-11 rounded-md border border-black/10 px-3" />
           <input name="email" type="email" placeholder="Email" required className="h-11 rounded-md border border-black/10 px-3" />
           <input name="password" type="password" placeholder="Password" required className="h-11 rounded-md border border-black/10 px-3" />
           <button className="h-11 rounded-md bg-[#17201c] font-semibold text-white">Create account</button>

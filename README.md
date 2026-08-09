@@ -4,10 +4,11 @@ MyShop is a production-oriented shopping website built with Next.js, TypeScript,
 
 ## Features
 
-- Responsive storefront with product search, category filtering, product details, image galleries, YouTube/self-hosted video support, cart, guest checkout, login, registration, and customer order history.
+- Responsive storefront with product search, category filtering, product details, image galleries, YouTube/self-hosted video support, cart, guest checkout, username/email login, registration, password changes, and customer order history.
 - Protected admin dashboard for orders, revenue, products, categories, customers, shipping, payments, branding, SMTP, AI configuration, and uploads.
 - PostgreSQL schema managed by Prisma migrations, with seed data for categories, products, shipping, payment, site settings, and an admin user.
 - Secure password hashing, signed HTTP-only session cookies, encrypted provider credentials, login rate limiting, validation with Zod, upload type/size validation, and security headers.
+- Thai Baht pricing and Century Gothic typography.
 - Dockerfile and docker-compose for local or server deployment.
 
 ## Setup

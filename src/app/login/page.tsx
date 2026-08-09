@@ -2,7 +2,18 @@ import Link from "next/link";
 import { loginAction } from "@/app/actions";
 import { SiteHeader } from "@/components/site-header";
 
-export default function LoginPage() {
+type LoginPageProps = {
+  searchParams: Promise<{ message?: string }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const params = await searchParams;
+  const message = {
+    invalid: "Username/email or password is incorrect.",
+    "rate-limited": "Too many login attempts. Please try again shortly.",
+    "account-exists": "An account already exists. Please log in.",
+  }[params.message || ""];
+
   return (
     <>
       <SiteHeader />
@@ -12,7 +23,8 @@ export default function LoginPage() {
             <h1 className="text-3xl font-semibold">Log in</h1>
             <p className="mt-2 text-sm text-slate-600">Access your orders or the admin dashboard.</p>
           </div>
-          <input name="email" type="email" placeholder="Email" required className="h-11 rounded-md border border-black/10 px-3" />
+          {message ? <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{message}</p> : null}
+          <input name="identifier" type="text" placeholder="Username or email" required className="h-11 rounded-md border border-black/10 px-3" />
           <input name="password" type="password" placeholder="Password" required className="h-11 rounded-md border border-black/10 px-3" />
           <button className="h-11 rounded-md bg-[#17201c] font-semibold text-white">Log in</button>
           <Link href="/register" className="text-center text-sm text-[#0f766e]">Create an account</Link>

@@ -4,13 +4,30 @@ export const emailSchema = z.string().email().toLowerCase();
 
 export const registerSchema = z.object({
   name: z.string().min(2).max(80),
+  username: z
+    .string()
+    .trim()
+    .min(3)
+    .max(32)
+    .regex(/^[a-zA-Z0-9_]+$/)
+    .optional()
+    .or(z.literal("")),
   email: emailSchema,
   password: z.string().min(8).max(128),
 });
 
 export const loginSchema = z.object({
-  email: emailSchema,
+  identifier: z.string().trim().min(3).max(120),
   password: z.string().min(8).max(128),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(8).max(128),
+  newPassword: z.string().min(8).max(128),
+  confirmPassword: z.string().min(8).max(128),
+}).refine((input) => input.newPassword === input.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
 });
 
 export const checkoutSchema = z.object({
