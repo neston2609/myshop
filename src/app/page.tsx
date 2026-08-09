@@ -15,7 +15,12 @@ export default async function Home() {
       orderBy: { createdAt: "desc" },
       include: { category: true, media: { orderBy: { sortOrder: "asc" } } },
     }),
-    prisma.category.findMany({ where: { active: true }, take: 4 }),
+    prisma.category.findMany({
+      where: { active: true },
+      take: 4,
+      orderBy: { name: "asc" },
+      include: { _count: { select: { products: true } } },
+    }),
     prisma.siteSettings.findFirst(),
   ]);
 
@@ -23,16 +28,17 @@ export default async function Home() {
     <>
       <SiteHeader />
       <main>
-        <section className="border-b border-black/10 bg-white">
-          <div className="container-shell grid gap-10 py-14 lg:grid-cols-[1fr_0.86fr] lg:items-center">
-            <div className="space-y-7">
-              <div className="flex h-56 w-56 items-center justify-center overflow-hidden rounded-lg border border-black/10 bg-white p-5 soft-shadow sm:h-64 sm:w-64 lg:h-80 lg:w-80">
+        <section className="overflow-hidden border-b border-black/10 bg-white">
+          <div className="container-shell grid gap-10 py-4 lg:grid-cols-[370px_minmax(0,1fr)] lg:gap-16 lg:py-0">
+            <div className="relative min-h-[500px] pb-8 pt-3 sm:min-h-[540px] lg:min-h-[560px]">
+              <div className="absolute bottom-0 left-[-32px] right-[-32px] top-[318px] bg-black lg:left-[calc((1180px-100vw)/2)] lg:right-0" />
+              <div className="relative z-10 flex aspect-square w-full max-w-[320px] items-center justify-center overflow-hidden rounded-lg border border-black/10 bg-white p-5 soft-shadow sm:max-w-[340px]">
                 {settings?.logoUrl ? (
                   <Image
                     src={settings.logoUrl}
                     alt={`${settings.shopName} logo`}
-                    width={320}
-                    height={320}
+                    width={340}
+                    height={340}
                     priority
                     className="h-full w-full object-contain"
                   />
@@ -40,16 +46,48 @@ export default async function Home() {
                   <Package className="text-[#17201c]" size={112} />
                 )}
               </div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#0f766e]">
+              <div className="relative z-10 mt-7 grid gap-3 pr-0 sm:max-w-[340px]">
+                <div className="flex items-center justify-between text-white">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">Categories</p>
+                  <Link href="/shop" className="text-xs font-semibold text-white/80 hover:text-white">
+                    View all
+                  </Link>
+                </div>
+                {categories.map((category) => (
+                  <Link
+                    key={category.id}
+                    href={`/shop?category=${category.slug}`}
+                    className="group grid min-h-[72px] grid-cols-[56px_1fr_24px] items-center gap-3 rounded-md border border-white/15 bg-white/8 p-2 text-white backdrop-blur"
+                  >
+                    <span className="relative h-14 w-14 overflow-hidden rounded-md bg-white/12">
+                      {category.imageUrl ? (
+                        <Image src={category.imageUrl} alt={category.name} fill className="object-cover" sizes="56px" />
+                      ) : (
+                        <Package className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white/70" size={20} />
+                      )}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">{category.name}</span>
+                      <span className="mt-0.5 line-clamp-1 block text-xs text-white/62">
+                        {category.description || `${category._count.products} products`}
+                      </span>
+                    </span>
+                    <ArrowRight className="transition group-hover:translate-x-1" size={17} />
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col justify-center pb-12 pt-2 lg:min-h-[560px] lg:pb-14 lg:pt-10">
+              <p className="text-sm font-semibold uppercase tracking-[0.32em] text-[#007275]">
                 Minimal commerce, ready to grow
               </p>
-              <h1 className="max-w-3xl text-5xl font-semibold leading-[1.04] tracking-tight text-slate-950 md:text-7xl">
+              <h1 className="mt-8 max-w-3xl text-5xl font-semibold leading-[1.04] tracking-tight text-slate-950 md:text-7xl">
                 Shop essentials with a calmer checkout.
               </h1>
-              <p className="max-w-xl text-lg leading-8 text-slate-600">
+              <p className="mt-8 max-w-xl text-lg leading-8 text-slate-600">
                 A modern storefront with guest checkout, customer accounts, secure admin controls, uploads, SMTP, payments, and AI configuration.
               </p>
-              <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link href="/shop" className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[#17201c] px-5 font-semibold text-white">
                   Browse products <ArrowRight size={17} />
                 </Link>
@@ -57,17 +95,6 @@ export default async function Home() {
                   Admin dashboard
                 </Link>
               </div>
-            </div>
-            <div className="grid gap-3 rounded-lg bg-[#e7f0ec] p-4 soft-shadow">
-              {categories.map((category) => (
-                <Link key={category.id} href={`/shop?category=${category.slug}`} className="flex items-center justify-between rounded-md bg-white p-4">
-                  <span>
-                    <span className="block font-semibold">{category.name}</span>
-                    <span className="text-sm text-slate-500">{category.description}</span>
-                  </span>
-                  <ArrowRight size={18} />
-                </Link>
-              ))}
             </div>
           </div>
         </section>
