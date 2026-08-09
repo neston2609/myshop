@@ -1,10 +1,12 @@
-import { saveProductAction } from "@/app/actions";
+import Image from "next/image";
+import { deleteProductAction, saveProductAction } from "@/app/actions";
+import { ImageUploadField } from "@/components/image-upload-field";
 import { money } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminProductsPage() {
   const [products, categories] = await Promise.all([
-    prisma.product.findMany({ include: { category: true }, orderBy: { createdAt: "desc" } }),
+    prisma.product.findMany({ include: { category: true, media: { orderBy: { sortOrder: "asc" } } }, orderBy: { createdAt: "desc" } }),
     prisma.category.findMany({ orderBy: { name: "asc" } }),
   ]);
 
@@ -13,14 +15,50 @@ export default async function AdminProductsPage() {
       <div className="rounded-lg border border-black/10 bg-white p-5">
         <h2 className="font-semibold">Products</h2>
         <div className="mt-4 divide-y divide-black/10">
-          {products.map((product) => (
-            <div key={product.id} className="grid gap-2 py-3 text-sm md:grid-cols-[1fr_110px_80px_80px]">
-              <span className="font-medium">{product.name}<span className="ml-2 text-slate-400">{product.category.name}</span></span>
-              <span>{product.sku}</span>
-              <span>{product.stock}</span>
-              <strong>{money(product.price)}</strong>
-            </div>
-          ))}
+          {products.map((product) => {
+            const imageUrl = product.media.find((media) => media.type === "IMAGE")?.url || "";
+            const youtubeUrl = product.media.find((media) => media.type === "YOUTUBE")?.url || "";
+            return (
+              <details key={product.id} className="group py-3 text-sm">
+                <summary className="grid cursor-pointer list-none items-center gap-3 rounded-md p-2 hover:bg-slate-50 md:grid-cols-[56px_1fr_110px_80px_80px]">
+                  <div className="relative h-12 w-12 overflow-hidden rounded-md border border-black/10 bg-slate-100">
+                    {imageUrl ? <Image src={imageUrl} alt={product.name} fill className="object-cover" sizes="48px" /> : null}
+                  </div>
+                  <span className="font-medium">
+                    {product.name}
+                    <span className="ml-2 text-slate-400">{product.category.name}</span>
+                    {!product.active ? <span className="ml-2 text-xs text-red-600">Inactive</span> : null}
+                  </span>
+                  <span>{product.sku}</span>
+                  <span>{product.stock}</span>
+                  <strong>{money(product.price)}</strong>
+                </summary>
+                <div className="mt-3 grid gap-3 rounded-lg bg-slate-50 p-4">
+                  <form action={saveProductAction} className="grid gap-3">
+                    <input type="hidden" name="id" value={product.id} />
+                    <input name="name" defaultValue={product.name} placeholder="Name" required className="h-10 rounded-md border border-black/10 bg-white px-3" />
+                    <textarea name="description" defaultValue={product.description} placeholder="Description" required className="min-h-24 rounded-md border border-black/10 bg-white px-3 py-2" />
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <input name="sku" defaultValue={product.sku} placeholder="SKU" required className="h-10 rounded-md border border-black/10 bg-white px-3" />
+                      <input name="price" defaultValue={product.price.toString()} type="number" step="0.01" placeholder="Price" required className="h-10 rounded-md border border-black/10 bg-white px-3" />
+                      <input name="stock" defaultValue={product.stock} type="number" placeholder="Stock" required className="h-10 rounded-md border border-black/10 bg-white px-3" />
+                    </div>
+                    <select name="categoryId" defaultValue={product.categoryId} required className="h-10 rounded-md border border-black/10 bg-white px-3">
+                      {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+                    </select>
+                    <ImageUploadField name="imageUrl" label="Product image" defaultValue={imageUrl} />
+                    <input name="youtubeUrl" defaultValue={youtubeUrl} placeholder="YouTube URL" className="h-10 rounded-md border border-black/10 bg-white px-3" />
+                    <label className="flex items-center gap-2 text-sm"><input name="active" type="checkbox" defaultChecked={product.active} /> Active</label>
+                    <button className="h-10 rounded-md bg-[#17201c] font-semibold text-white">Save changes</button>
+                  </form>
+                  <form action={deleteProductAction}>
+                    <input type="hidden" name="id" value={product.id} />
+                    <button className="h-10 rounded-md border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-700">Delete product</button>
+                  </form>
+                </div>
+              </details>
+            );
+          })}
         </div>
       </div>
       <form action={saveProductAction} className="grid h-fit gap-3 rounded-lg border border-black/10 bg-white p-5">
@@ -33,7 +71,7 @@ export default async function AdminProductsPage() {
         <select name="categoryId" required className="h-10 rounded-md border border-black/10 px-3">
           {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
         </select>
-        <input name="imageUrl" placeholder="Image URL or uploaded path" className="h-10 rounded-md border border-black/10 px-3" />
+        <ImageUploadField name="imageUrl" label="Product image" />
         <input name="youtubeUrl" placeholder="YouTube URL" className="h-10 rounded-md border border-black/10 px-3" />
         <label className="flex items-center gap-2 text-sm"><input name="active" type="checkbox" defaultChecked /> Active</label>
         <button className="h-10 rounded-md bg-[#17201c] font-semibold text-white">Save product</button>

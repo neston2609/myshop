@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 export const emailSchema = z.string().email().toLowerCase();
+const uploadedImageSchema = z
+  .string()
+  .refine((value) => value === "" || value.startsWith("/uploads/") || z.url().safeParse(value).success, {
+    message: "Use an uploaded image or a valid URL",
+  });
 
 export const registerSchema = z.object({
   name: z.string().min(2).max(80),
@@ -49,14 +54,14 @@ export const productSchema = z.object({
   stock: z.coerce.number().int().min(0),
   categoryId: z.string().min(1),
   active: z.coerce.boolean().default(true),
-  imageUrl: z.string().url().optional().or(z.literal("")),
+  imageUrl: uploadedImageSchema.optional(),
   youtubeUrl: z.string().url().optional().or(z.literal("")),
 });
 
 export const categorySchema = z.object({
   name: z.string().min(2).max(100),
   description: z.string().max(240).optional(),
-  imageUrl: z.string().url().optional().or(z.literal("")),
+  imageUrl: uploadedImageSchema.optional(),
   active: z.coerce.boolean().default(true),
 });
 

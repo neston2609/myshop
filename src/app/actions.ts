@@ -148,7 +148,7 @@ export async function checkoutAction(formData: FormData) {
 }
 
 export async function saveProductAction(formData: FormData) {
-  const input = productSchema.parse(Object.fromEntries(formData));
+  const input = productSchema.parse({ ...Object.fromEntries(formData), active: formData.has("active") });
   const id = formValue(formData, "id");
   const slug = slugify(input.name);
   const data = {
@@ -174,10 +174,34 @@ export async function saveProductAction(formData: FormData) {
   if (media.length) await prisma.productMedia.createMany({ data: media });
   revalidatePath("/admin/products");
   revalidatePath("/shop");
+  revalidatePath("/");
+}
+
+export async function deleteProductAction(formData: FormData) {
+  const id = formValue(formData, "id");
+  if (!id) return;
+
+  const [orderItems, cartItems] = await Promise.all([
+    prisma.orderItem.count({ where: { productId: id } }),
+    prisma.cartItem.count({ where: { productId: id } }),
+  ]);
+
+  if (orderItems || cartItems) {
+    await prisma.product.update({
+      where: { id },
+      data: { active: false },
+    });
+  } else {
+    await prisma.product.delete({ where: { id } });
+  }
+
+  revalidatePath("/admin/products");
+  revalidatePath("/shop");
+  revalidatePath("/");
 }
 
 export async function saveCategoryAction(formData: FormData) {
-  const input = categorySchema.parse(Object.fromEntries(formData));
+  const input = categorySchema.parse({ ...Object.fromEntries(formData), active: formData.has("active") });
   const id = formValue(formData, "id");
   const data = {
     name: input.name,
@@ -189,6 +213,27 @@ export async function saveCategoryAction(formData: FormData) {
   if (id) await prisma.category.update({ where: { id }, data });
   else await prisma.category.create({ data });
   revalidatePath("/admin/categories");
+  revalidatePath("/shop");
+  revalidatePath("/");
+}
+
+export async function deleteCategoryAction(formData: FormData) {
+  const id = formValue(formData, "id");
+  if (!id) return;
+
+  const products = await prisma.product.count({ where: { categoryId: id } });
+  if (products) {
+    await prisma.category.update({
+      where: { id },
+      data: { active: false },
+    });
+  } else {
+    await prisma.category.delete({ where: { id } });
+  }
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/shop");
+  revalidatePath("/");
 }
 
 export async function saveShippingAction(formData: FormData) {
