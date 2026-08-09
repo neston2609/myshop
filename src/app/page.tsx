@@ -1,5 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, Sparkles, Truck } from "lucide-react";
+import { ArrowRight, Package, ShieldCheck, Sparkles, Truck } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { ProductCard } from "@/components/product-card";
 import { prisma } from "@/lib/prisma";
@@ -7,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [products, categories] = await Promise.all([
+  const [products, categories, settings] = await Promise.all([
     prisma.product.findMany({
       where: { active: true },
       take: 8,
@@ -15,6 +16,7 @@ export default async function Home() {
       include: { category: true, media: { orderBy: { sortOrder: "asc" } } },
     }),
     prisma.category.findMany({ where: { active: true }, take: 4 }),
+    prisma.siteSettings.findFirst(),
   ]);
 
   return (
@@ -24,6 +26,20 @@ export default async function Home() {
         <section className="border-b border-black/10 bg-white">
           <div className="container-shell grid gap-10 py-14 lg:grid-cols-[1fr_0.86fr] lg:items-center">
             <div className="space-y-7">
+              <div className="flex h-56 w-56 items-center justify-center overflow-hidden rounded-lg border border-black/10 bg-white p-5 soft-shadow sm:h-64 sm:w-64 lg:h-80 lg:w-80">
+                {settings?.logoUrl ? (
+                  <Image
+                    src={settings.logoUrl}
+                    alt={`${settings.shopName} logo`}
+                    width={320}
+                    height={320}
+                    priority
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <Package className="text-[#17201c]" size={112} />
+                )}
+              </div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#0f766e]">
                 Minimal commerce, ready to grow
               </p>
