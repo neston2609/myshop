@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Package, ShieldCheck, Sparkles, Truck } from "lucide-react";
 import { ProductCard } from "@/components/product-card";
+import { SiteHeader } from "@/components/site-header";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -25,12 +26,12 @@ export default async function Home() {
 
   return (
     <>
+      <SiteHeader />
       <main>
-        <section className="overflow-hidden border-b border-black/10 bg-white">
-          <div className="mx-auto grid w-[min(1180px,calc(100%-32px))] gap-10 py-4 sm:w-[min(1180px,calc(100%-64px))] lg:w-[min(1180px,calc(100%-104px))] lg:grid-cols-[370px_minmax(0,1fr)] lg:gap-12 lg:py-0 xl:gap-16">
-            <div className="relative min-h-[500px] pb-8 pt-3 sm:min-h-[540px] lg:min-h-[560px]">
-              <div className="absolute bottom-0 left-[-32px] right-[-32px] top-[318px] bg-black lg:left-[calc((1180px-100vw)/2)] lg:right-0" />
-              <div className="relative z-10 flex aspect-square w-full max-w-[320px] items-center justify-center overflow-hidden rounded-lg border border-black/10 bg-white p-5 soft-shadow sm:max-w-[340px]">
+        <section className="overflow-hidden border-b border-[var(--border)] bg-[var(--page)]">
+          <div className="container-shell grid gap-10 py-10 lg:grid-cols-[410px_minmax(0,1fr)] lg:items-center lg:gap-14 lg:py-14 xl:gap-18">
+            <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] p-5 soft-shadow sm:p-7">
+              <div className="relative mx-auto aspect-square w-full max-w-[330px] overflow-hidden">
                 {settings?.logoUrl ? (
                   <Image
                     src={settings.logoUrl}
@@ -38,16 +39,16 @@ export default async function Home() {
                     width={340}
                     height={340}
                     priority
-                    className="h-full w-full object-contain"
+                    className="h-full w-full object-contain drop-shadow-[0_18px_36px_rgba(0,0,0,0.18)]"
                   />
                 ) : (
-                  <Package className="text-[#17201c]" size={112} />
+                  <Package className="m-auto h-full w-28 text-[var(--muted)]" />
                 )}
               </div>
-              <div className="relative z-10 mt-7 grid gap-3 pr-0 sm:max-w-[340px]">
-                <div className="flex items-center justify-between text-white">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">Categories</p>
-                  <Link href="/shop" className="text-xs font-semibold text-white/80 hover:text-white">
+              <div className="mt-7 grid gap-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--subtle)]">Categories</p>
+                  <Link href="/shop" className="text-xs font-semibold text-[var(--accent)]">
                     View all
                   </Link>
                 </div>
@@ -55,18 +56,18 @@ export default async function Home() {
                   <Link
                     key={category.id}
                     href={category.slug ? `/shop?category=${category.slug}` : "/shop"}
-                    className="group grid min-h-[72px] grid-cols-[56px_1fr_24px] items-center gap-3 rounded-md border border-white/15 bg-white/8 p-2 text-white backdrop-blur"
+                    className="group grid min-h-[74px] grid-cols-[58px_1fr_24px] items-center gap-3 rounded-md border border-[var(--border)] bg-[var(--surface-raised)] p-2.5 text-[var(--text)]"
                   >
-                    <span className="relative h-14 w-14 overflow-hidden rounded-md bg-white/12">
+                    <span className="relative h-[58px] w-[58px] overflow-hidden rounded-md bg-[var(--surface-soft)]">
                       {category.imageUrl ? (
                         <Image src={category.imageUrl} alt={category.name} fill className="object-cover" sizes="56px" />
                       ) : (
-                        <Package className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white/70" size={20} />
+                        <Package className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[var(--muted)]" size={20} />
                       )}
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate font-semibold">{category.name}</span>
-                      <span className="mt-0.5 line-clamp-1 block text-xs text-white/62">
+                      <span className="mt-0.5 line-clamp-1 block text-xs text-[var(--muted)]">
                         {category.description || `${category._count.products} products`}
                       </span>
                     </span>
@@ -75,21 +76,21 @@ export default async function Home() {
                 ))}
               </div>
             </div>
-            <div className="flex flex-col pb-12 pt-2 lg:min-h-[560px] lg:pb-14 lg:pt-10">
-              <p className="text-sm font-semibold uppercase tracking-[0.32em] text-[#007275]">
+            <div className="flex flex-col py-2 lg:py-10">
+              <p className="text-sm font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">
                 Minimal commerce, ready to grow
               </p>
-              <h1 className="mt-8 max-w-[560px] text-5xl font-semibold leading-[1.04] tracking-tight text-slate-950 md:text-7xl">
+              <h1 className="mt-7 max-w-[590px] text-5xl font-semibold leading-[1.04] text-[var(--text)] md:text-7xl">
                 Shop essentials with a calmer checkout.
               </h1>
-              <p className="mt-8 max-w-xl text-lg leading-8 text-slate-600">
+              <p className="mt-7 max-w-xl text-lg leading-8 text-[var(--muted)]">
                 A modern storefront with guest checkout, customer accounts, secure admin controls, uploads, SMTP, payments, and AI configuration.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href="/shop" className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[#17201c] px-5 font-semibold text-white">
+                <Link href="/shop" className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[var(--text)] px-5 font-semibold text-[var(--surface)]">
                   Browse products <ArrowRight size={17} />
                 </Link>
-                <Link href="/admin" className="inline-flex h-12 items-center justify-center rounded-md border border-black/10 px-5 font-semibold">
+                <Link href="/admin" className="inline-flex h-12 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-5 font-semibold text-[var(--text)]">
                   Admin dashboard
                 </Link>
               </div>
@@ -104,10 +105,10 @@ export default async function Home() {
           ].map((item) => {
             const Icon = item.icon;
             return (
-              <div key={item.title} className="rounded-lg border border-black/10 bg-white p-5">
-                <Icon className="mb-4 text-[#0f766e]" size={22} />
-                <h2 className="font-semibold">{item.title}</h2>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{item.body}</p>
+              <div key={item.title} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
+                <Icon className="mb-4 text-[var(--accent)]" size={22} />
+                <h2 className="font-semibold text-[var(--text)]">{item.title}</h2>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">{item.body}</p>
               </div>
             );
           })}
@@ -115,10 +116,10 @@ export default async function Home() {
         <section className="container-shell space-y-6 pb-14">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#0f766e]">Featured</p>
-              <h2 className="mt-2 text-3xl font-semibold tracking-tight">Latest products</h2>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Featured</p>
+              <h2 className="mt-2 text-3xl font-semibold text-[var(--text)]">Latest products</h2>
             </div>
-            <Link href="/shop" className="hidden text-sm font-semibold text-[#0f766e] md:block">View all</Link>
+            <Link href="/shop" className="hidden text-sm font-semibold text-[var(--accent)] md:block">View all</Link>
           </div>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {products.map((product) => <ProductCard key={product.id} product={product} />)}

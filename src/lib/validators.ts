@@ -122,5 +122,7 @@ export const siteSettingsSchema = z.object({
   logoUrl: z.string().optional(),
   faviconUrl: z.string().optional(),
   brandColor: z.string().min(4).max(20),
+  themeMode: z.enum(["WHITE", "BLACK"]).default("WHITE"),
+  fontFamily: z.enum(["CENTURY_GOTHIC", "TH_SARABUN_PSK", "PROMPT", "IMPACT"]).default("TH_SARABUN_PSK"),
   supportEmail: z.string().email().optional().or(z.literal("")),
 });

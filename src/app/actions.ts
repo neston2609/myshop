@@ -311,6 +311,8 @@ export async function saveSiteSettingsAction(formData: FormData) {
     logoUrl: input.logoUrl || null,
     faviconUrl: input.faviconUrl || null,
     brandColor: input.brandColor,
+    themeMode: input.themeMode,
+    fontFamily: input.fontFamily,
     supportEmail: input.supportEmail || null,
   };
   if (current) await prisma.siteSettings.update({ where: { id: current.id }, data });

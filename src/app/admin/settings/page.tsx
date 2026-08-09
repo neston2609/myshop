@@ -20,6 +20,22 @@ export default async function AdminSettingsPage() {
             <LogoUploadField defaultValue={site?.logoUrl} />
             <input name="faviconUrl" defaultValue={site?.faviconUrl || ""} placeholder="Favicon URL or uploaded path" className="h-10 rounded-md border border-black/10 px-3" />
             <input name="brandColor" defaultValue={site?.brandColor || "#111827"} placeholder="#111827" className="h-10 rounded-md border border-black/10 px-3" />
+            <label className="grid gap-1 text-sm font-medium">
+              Theme
+              <select name="themeMode" defaultValue={site?.themeMode || "WHITE"} className="h-10 rounded-md border border-black/10 px-3 font-normal">
+                <option value="WHITE">White theme</option>
+                <option value="BLACK">Black theme</option>
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm font-medium">
+              Website font
+              <select name="fontFamily" defaultValue={site?.fontFamily || "TH_SARABUN_PSK"} className="h-10 rounded-md border border-black/10 px-3 font-normal">
+                <option value="CENTURY_GOTHIC">Century Gothic</option>
+                <option value="TH_SARABUN_PSK">TH Sarabun PSK</option>
+                <option value="PROMPT">Prompt</option>
+                <option value="IMPACT">Impact</option>
+              </select>
+            </label>
           </div>
           <button className="h-10 w-fit rounded-md bg-[#17201c] px-4 font-semibold text-white">Save branding</button>
         </form>

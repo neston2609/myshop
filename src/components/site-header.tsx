@@ -13,21 +13,21 @@ export async function SiteHeader() {
   ]);
 
   return (
-    <header className="border-b border-black/10 bg-white/90 backdrop-blur">
+    <header className="border-b border-[var(--border)] bg-[var(--surface)]/90 text-[var(--text)] backdrop-blur">
       <div className="container-shell flex h-16 items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-3 font-semibold tracking-tight">
+        <Link href="/" className="flex items-center gap-3 font-semibold">
           {settings?.logoUrl ? (
-            <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border border-black/10 bg-white">
-              <Image src={settings.logoUrl} alt={`${settings.shopName} logo`} width={40} height={40} className="h-full w-full object-contain" />
+            <span className="relative h-10 w-10 overflow-hidden">
+              <Image src={settings.logoUrl} alt={`${settings.shopName} logo`} fill sizes="40px" className="object-contain" />
             </span>
           ) : (
-            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#17201c] text-white">
+            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--text)] text-[var(--surface)]">
               <Package size={19} />
             </span>
           )}
           <span>{settings?.shopName || "MyShop"}</span>
         </Link>
-        <nav className="hidden items-center gap-6 text-sm text-slate-700 md:flex">
+        <nav className="hidden items-center gap-6 text-sm text-[var(--muted)] md:flex">
           <Link href="/shop">Shop</Link>
           <Link href="/shop?sort=new">New arrivals</Link>
           <Link href="/shop?stock=in">In stock</Link>
@@ -36,21 +36,21 @@ export async function SiteHeader() {
         <div className="flex items-center gap-2">
           <Link
             href="/shop"
-            className="flex h-10 w-10 items-center justify-center rounded-md border border-black/10 bg-white"
+            className="flex h-10 w-10 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-raised)]"
             aria-label="Search products"
           >
             <Search size={18} />
           </Link>
           <Link
             href={session ? "/account" : "/login"}
-            className="flex h-10 w-10 items-center justify-center rounded-md border border-black/10 bg-white"
+            className="flex h-10 w-10 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-raised)]"
             aria-label="Account"
           >
             <UserRound size={18} />
           </Link>
           <Link
             href="/cart"
-            className="relative flex h-10 w-10 items-center justify-center rounded-md bg-[#0f766e] text-white"
+            className="relative flex h-10 w-10 items-center justify-center rounded-md bg-[var(--accent)] text-white"
             aria-label="Shopping cart"
           >
             <ShoppingBag size={18} />

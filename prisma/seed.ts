@@ -28,6 +28,8 @@ async function main() {
       shopName: "MyShop",
       supportEmail: "support@example.com",
       brandColor: "#17201c",
+      themeMode: "WHITE",
+      fontFamily: "TH_SARABUN_PSK",
     },
   });
 
