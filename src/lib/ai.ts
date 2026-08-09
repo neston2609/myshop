@@ -35,6 +35,7 @@ const defaultModels: Record<AiProvider, string> = {
 };
 
 const geminiVertexLocations = ["global", "us-central1"];
+const geminiVertexApiVersions = ["v1", "v1beta1"];
 const defaultVertexGeminiModels = [
   "gemini-2.5-flash",
   "gemini-2.5-pro",
@@ -100,8 +101,25 @@ function vertexBaseUrl(location: string) {
   return location === "global" ? "https://aiplatform.googleapis.com" : `https://${location}-aiplatform.googleapis.com`;
 }
 
-function vertexGenerateEndpoint(projectId: string, location: string, model: string) {
-  return `${vertexBaseUrl(location)}/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
+function vertexGenerateEndpoint(projectId: string, location: string, apiVersion: string, model: string) {
+  return `${vertexBaseUrl(location)}/${apiVersion}/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
+}
+
+function vertexModelsEndpoint(projectId: string, location: string, apiVersion: string) {
+  return `${vertexBaseUrl(location)}/${apiVersion}/projects/${projectId}/locations/${location}/publishers/google/models`;
+}
+
+async function googleErrorMessage(response: Response) {
+  const text = await response.text().catch(() => "");
+  if (!text) return `${response.status}`;
+
+  try {
+    const data = JSON.parse(text) as { error?: { message?: string; status?: string } };
+    const status = data.error?.status ? `${data.error.status}: ` : "";
+    return `${response.status} ${status}${data.error?.message || text}`.trim();
+  } catch {
+    return `${response.status} ${text}`.trim();
+  }
 }
 
 function getOpenAiCompatibleEndpoint(settings: AiSettingsForGeneration) {
@@ -191,33 +209,35 @@ async function generateGeminiText(settings: AiSettingsForGeneration, input: AiGe
     const errors: string[] = [];
 
     for (const location of geminiVertexLocations) {
-      const response = await fetch(vertexGenerateEndpoint(projectId, location, model), {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: input.prompt }] }],
-          generationConfig: {
-            maxOutputTokens: input.maxTokens || 700,
+      for (const apiVersion of geminiVertexApiVersions) {
+        const response = await fetch(vertexGenerateEndpoint(projectId, location, apiVersion, model), {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
           },
-        }),
-        cache: "no-store",
-      });
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: input.prompt }] }],
+            generationConfig: {
+              maxOutputTokens: input.maxTokens || 700,
+            },
+          }),
+          cache: "no-store",
+        });
 
-      if (!response.ok) {
-        errors.push(`${location}: ${response.status}`);
-        continue;
+        if (!response.ok) {
+          errors.push(`${location}/${apiVersion}: ${await googleErrorMessage(response)}`);
+          continue;
+        }
+
+        const data = await response.json();
+        const text = (data?.candidates?.[0]?.content?.parts || [])
+          .map((part: { text?: string }) => part.text || "")
+          .join("")
+          .trim();
+        if (!text) throw new Error("Google Vertex AI returned an empty response.");
+        return text;
       }
-
-      const data = await response.json();
-      const text = (data?.candidates?.[0]?.content?.parts || [])
-        .map((part: { text?: string }) => part.text || "")
-        .join("")
-        .trim();
-      if (!text) throw new Error("Google Vertex AI returned an empty response.");
-      return text;
     }
 
     throw new Error(`Google Vertex AI rejected the request (${errors.join(", ")}).`);
@@ -258,27 +278,29 @@ export async function fetchGeminiModels(rawCredential: string) {
   const errors: string[] = [];
 
   for (const location of geminiVertexLocations) {
-    const response = await fetch(
-      `${vertexBaseUrl(location)}/v1/projects/${projectId}/locations/${location}/publishers/google/models`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        cache: "no-store",
-      },
-    );
+    for (const apiVersion of geminiVertexApiVersions) {
+      const response = await fetch(
+        vertexModelsEndpoint(projectId, location, apiVersion),
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          cache: "no-store",
+        },
+      );
 
-    if (!response.ok) {
-      errors.push(`${location}: ${response.status}`);
-      continue;
+      if (!response.ok) {
+        errors.push(`${location}/${apiVersion}: ${response.status}`);
+        continue;
+      }
+
+      const data = await response.json();
+      const models = ((data.publisherModels || data.models || []) as Array<{ name?: string; displayName?: string }>)
+        .map((model) => model.name?.split("/").pop() || model.displayName)
+        .filter(Boolean) as string[];
+      return models.length > 0 ? models : defaultVertexGeminiModels;
     }
-
-    const data = await response.json();
-    const models = ((data.publisherModels || data.models || []) as Array<{ name?: string; displayName?: string }>)
-      .map((model) => model.name?.split("/").pop() || model.displayName)
-      .filter(Boolean) as string[];
-    return models.length > 0 ? models : defaultVertexGeminiModels;
   }
 
-  if (errors.every((error) => error.endsWith(": 404"))) return defaultVertexGeminiModels;
+  if (errors.every((error) => error.endsWith(": 403") || error.endsWith(": 404"))) return defaultVertexGeminiModels;
   throw new Error(`Google Vertex AI model fetch failed (${errors.join(", ")}).`);
 }
 
