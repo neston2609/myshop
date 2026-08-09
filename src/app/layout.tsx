@@ -8,12 +8,25 @@ const defaultAppearance = {
   brandColor: "#111827",
   themeMode: "WHITE",
   fontFamily: "TH_SARABUN_PSK",
+  footerText: "",
 };
+
+function formatBuildDate(value?: string) {
+  if (!value) return "Unknown";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Bangkok",
+  }).format(date);
+}
 
 async function getSiteAppearance() {
   try {
     const settings = await prisma.siteSettings.findFirst({
-      select: { shopName: true, brandColor: true, themeMode: true, fontFamily: true },
+      select: { shopName: true, brandColor: true, themeMode: true, fontFamily: true, footerText: true },
     });
 
     return {
@@ -21,6 +34,7 @@ async function getSiteAppearance() {
       brandColor: settings?.brandColor || defaultAppearance.brandColor,
       themeMode: settings?.themeMode || defaultAppearance.themeMode,
       fontFamily: settings?.fontFamily || defaultAppearance.fontFamily,
+      footerText: settings?.footerText || defaultAppearance.footerText,
     };
   } catch {
     return defaultAppearance;
@@ -46,6 +60,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const appearance = await getSiteAppearance();
+  const footerText = appearance.footerText.trim() || `© ${new Date().getFullYear()} ${appearance.shopName}. All rights reserved.`;
+  const buildVersion = process.env.NEXT_PUBLIC_BUILD_VERSION || "0.0.0+dev";
+  const sourceLastUpdated = formatBuildDate(process.env.NEXT_PUBLIC_SOURCE_LAST_UPDATED);
 
   return (
     <html
@@ -59,6 +76,15 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         style={{ "--brand": appearance.brandColor } as CSSProperties}
       >
         {children}
+        <footer className="mt-auto border-t border-[var(--border)] bg-[var(--surface)] text-[var(--muted)]">
+          <div className="container-shell flex flex-col gap-3 py-5 text-sm md:flex-row md:items-center md:justify-between">
+            <p className="whitespace-pre-line">{footerText}</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--subtle)]">
+              <span>Build version: {buildVersion}</span>
+              <span>Last source update: {sourceLastUpdated}</span>
+            </div>
+          </div>
+        </footer>
       </body>
     </html>
   );

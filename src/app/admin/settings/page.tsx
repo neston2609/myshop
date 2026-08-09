@@ -46,6 +46,10 @@ export default async function AdminSettingsPage() {
             <input name="heroTitle" defaultValue={site?.heroTitle || defaultHeroTitle} placeholder="Main title" required className="h-10 rounded-md border border-black/10 px-3" />
             <textarea name="heroSubtitle" defaultValue={site?.heroSubtitle || defaultHeroSubtitle} placeholder="Subtitle" required rows={3} className="rounded-md border border-black/10 px-3 py-2" />
           </div>
+          <div className="grid gap-3 border-t border-black/10 pt-4">
+            <h3 className="text-sm font-semibold">Footer</h3>
+            <textarea name="footerText" defaultValue={site?.footerText || ""} placeholder="Footer text" rows={3} className="rounded-md border border-black/10 px-3 py-2" />
+          </div>
           <button className="h-10 w-fit rounded-md bg-[#17201c] px-4 font-semibold text-white">Save branding</button>
         </form>
         <h2 className="mt-8 font-semibold">Shipping methods</h2>

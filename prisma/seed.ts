@@ -33,6 +33,7 @@ async function main() {
       heroEyebrow: "Minimal commerce, ready to grow",
       heroTitle: "Shop essentials with a calmer checkout.",
       heroSubtitle: "A modern storefront with guest checkout, customer accounts, secure admin controls, uploads, SMTP, payments, and AI configuration.",
+      footerText: "",
     },
   });
 

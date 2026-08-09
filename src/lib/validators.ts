@@ -127,5 +127,6 @@ export const siteSettingsSchema = z.object({
   heroEyebrow: z.string().min(2).max(80),
   heroTitle: z.string().min(2).max(120),
   heroSubtitle: z.string().min(2).max(260),
+  footerText: z.string().max(500).optional(),
   supportEmail: z.string().email().optional().or(z.literal("")),
 });

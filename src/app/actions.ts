@@ -318,6 +318,7 @@ export async function saveSiteSettingsAction(formData: FormData) {
     heroEyebrow: input.heroEyebrow,
     heroTitle: input.heroTitle,
     heroSubtitle: input.heroSubtitle,
+    footerText: input.footerText || "",
     supportEmail: input.supportEmail || null,
   };
   if (current) await prisma.siteSettings.update({ where: { id: current.id }, data });
