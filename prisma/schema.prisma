@@ -143,6 +143,9 @@ model Order {
   paymentStatus       String?
   shippingMethodId    String?
   shippingMethod      ShippingMethod? @relation(fields: [shippingMethodId], references: [id])
+  trackingCarrierCode String?
+  trackingCarrierName String?
+  trackingNumber      String?
   items               OrderItem[]
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt

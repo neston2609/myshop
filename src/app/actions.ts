@@ -6,18 +6,20 @@ import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { addCartItem, clearCart, getCart, updateCartItem } from "@/lib/cart";
-import { createSession, destroySession, findUserByEmail, findUserByIdentifier, getSession, hashPassword, verifyPassword } from "@/lib/auth";
+import { createSession, destroySession, findUserByEmail, findUserByIdentifier, getSession, hashPassword, requireAdmin, requireUser, verifyPassword } from "@/lib/auth";
 import { encryptSecret } from "@/lib/crypto";
 import { sanitizeProductHtml } from "@/lib/html";
 import { buildPayPalCredentials, buildStripeCredentials, createPayPalOrder, createStripeCheckoutSession, readPaymentCredentials } from "@/lib/payments";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/format";
+import { findShippingCarrier } from "@/lib/shipping-carriers";
 import {
   aiSchema,
   changePasswordSchema,
   categorySchema,
   checkoutSchema,
   loginSchema,
+  orderTrackingSchema,
   paymentSchema,
   productSchema,
   registerSchema,
@@ -113,6 +115,10 @@ async function requestOrigin() {
   const proto = requestHeaders.get("x-forwarded-proto") || "https";
   const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "localhost:3000";
   return `${proto}://${host}`;
+}
+
+function orderIsPaid(status: string) {
+  return ["PAID", "PROCESSING", "SHIPPED", "COMPLETED"].includes(status);
 }
 
 export async function addToCartAction(formData: FormData) {
@@ -286,6 +292,68 @@ export async function checkoutAction(formData: FormData) {
 
   await clearCart();
   redirect(`/checkout/success?order=${order.orderNumber}`);
+}
+
+export async function payOrderAction(formData: FormData) {
+  const session = await requireUser();
+  const orderId = formValue(formData, "orderId");
+  const order = await prisma.order.findFirst({
+    where: {
+      id: orderId,
+      OR: [{ userId: session.id }, { customerEmail: session.email }],
+    },
+    include: { items: true, paymentMethod: true },
+  });
+
+  if (!order) redirect("/account?message=order-not-found");
+  if (orderIsPaid(order.status)) redirect("/account?message=already-paid");
+  if (!order.paymentMethod) redirect("/account?message=payment-unavailable");
+
+  const paymentOrder = {
+    id: order.id,
+    orderNumber: order.orderNumber,
+    customerEmail: order.customerEmail,
+    total: Number(order.total),
+    shippingCost: Number(order.shippingCost),
+    items: order.items.map((item) => ({
+      name: item.name,
+      price: Number(item.price),
+      quantity: item.quantity,
+      total: Number(item.total),
+    })),
+  };
+
+  if (order.paymentMethod.provider === "STRIPE") {
+    redirect(await createStripeCheckoutSession({ method: order.paymentMethod, order: paymentOrder, origin: await requestOrigin() }));
+  }
+
+  if (order.paymentMethod.provider === "PAYPAL") {
+    redirect(await createPayPalOrder({ method: order.paymentMethod, order: paymentOrder, origin: await requestOrigin() }));
+  }
+
+  redirect("/account?message=manual-payment");
+}
+
+export async function updateOrderTrackingAction(formData: FormData) {
+  await requireAdmin();
+  const input = orderTrackingSchema.parse(Object.fromEntries(formData));
+  const carrier = findShippingCarrier(input.trackingCarrierCode);
+  if (!carrier) redirect("/admin/orders?message=carrier-invalid");
+
+  const order = await prisma.order.findUnique({ where: { id: input.orderId }, select: { status: true } });
+  if (!order || !orderIsPaid(order.status)) redirect("/admin/orders?message=tracking-not-allowed");
+
+  await prisma.order.update({
+    where: { id: input.orderId },
+    data: {
+      trackingCarrierCode: carrier.code,
+      trackingCarrierName: carrier.name,
+      trackingNumber: input.trackingNumber,
+    },
+  });
+  revalidatePath("/admin/orders");
+  revalidatePath("/account");
+  redirect("/admin/orders?message=tracking-saved");
 }
 
 export async function saveProductAction(formData: FormData) {

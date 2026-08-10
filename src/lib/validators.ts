@@ -77,6 +77,12 @@ export const shippingSchema = z.object({
   enabled: z.coerce.boolean().default(true),
 });
 
+export const orderTrackingSchema = z.object({
+  orderId: z.string().min(1),
+  trackingCarrierCode: z.string().min(1).max(80),
+  trackingNumber: z.string().trim().min(3).max(100),
+});
+
 export const paymentSchema = z.object({
   name: z.string().min(2).max(100),
   provider: z.enum(["CASH_ON_DELIVERY", "BANK_TRANSFER", "STRIPE", "PAYPAL", "CUSTOM"]),

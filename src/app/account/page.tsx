@@ -1,8 +1,9 @@
-import { changePasswordAction, logoutAction } from "@/app/actions";
+import { changePasswordAction, logoutAction, payOrderAction } from "@/app/actions";
 import { SiteHeader } from "@/components/site-header";
 import { requireUser } from "@/lib/auth";
 import { money } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
+import { findShippingCarrier, trackingHref } from "@/lib/shipping-carriers";
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +17,16 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
   const message = {
     "password-changed": "Password changed successfully.",
     "password-invalid": "Current password is incorrect.",
+    "payment-cancelled": "Payment was cancelled. You can try again from the order below.",
+    "payment-unavailable": "This order cannot be paid online right now.",
+    "manual-payment": "This order uses a manual payment method. Please follow the store payment instructions.",
+    "already-paid": "This order is already paid.",
+    "order-not-found": "Order not found.",
   }[params.message || ""];
-  const isError = params.message === "password-invalid";
+  const isError = params.message === "password-invalid" || params.message === "payment-unavailable" || params.message === "order-not-found";
   const orders = await prisma.order.findMany({
     where: { OR: [{ userId: session.id }, { customerEmail: session.email }] },
-    include: { items: true },
+    include: { items: true, paymentMethod: true },
     orderBy: { createdAt: "desc" },
   });
 
@@ -47,16 +53,46 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
           ) : null}
           {orders.map((order) => {
             const destination = [order.shippingProvince || order.shippingCity, order.shippingPostalCode].filter(Boolean).join(" ");
+            const isPaid = ["PAID", "PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status);
+            const canPayNow = !isPaid && (order.paymentMethod?.provider === "STRIPE" || order.paymentMethod?.provider === "PAYPAL");
+            const carrier = findShippingCarrier(order.trackingCarrierCode);
+            const trackingUrl = trackingHref(order.trackingCarrierCode, order.trackingNumber);
             return (
               <article key={order.id} className="rounded-lg border border-black/10 bg-white p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="font-semibold">{order.orderNumber}</p>
-                    <p className="text-sm text-slate-500">{order.createdAt.toLocaleDateString()} - {order.status}</p>
+                    <p className="text-sm text-slate-500">
+                      {order.createdAt.toLocaleDateString()} - {order.status}
+                      {order.paymentStatus ? ` - payment: ${order.paymentStatus}` : ""}
+                    </p>
                   </div>
-                  <strong>{money(order.total)}</strong>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <strong>{money(order.total)}</strong>
+                    {canPayNow ? (
+                      <form action={payOrderAction}>
+                        <input type="hidden" name="orderId" value={order.id} />
+                        <button className="h-10 rounded-md bg-[#0f766e] px-4 font-semibold text-white transition hover:bg-[#115e59] active:translate-y-px">
+                          ชำระเงิน
+                        </button>
+                      </form>
+                    ) : null}
+                  </div>
                 </div>
                 <p className="mt-3 text-sm text-slate-600">{order.items.length} items shipped to {destination || order.shippingCountry}</p>
+                {order.trackingNumber ? (
+                  <div className="mt-3 rounded-md border border-black/10 bg-slate-50 p-3 text-sm">
+                    <p className="font-semibold text-slate-800">ข้อมูลจัดส่ง</p>
+                    <p className="mt-1 text-slate-600">ขนส่ง: {order.trackingCarrierName || carrier?.name || order.trackingCarrierCode}</p>
+                    {trackingUrl ? (
+                      <a href={trackingUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex font-semibold text-[#0f766e] underline-offset-4 hover:underline">
+                        Tracking: {order.trackingNumber}
+                      </a>
+                    ) : (
+                      <p className="mt-1 text-slate-600">Tracking: {order.trackingNumber}</p>
+                    )}
+                  </div>
+                ) : null}
               </article>
             );
           })}

@@ -15,7 +15,7 @@ async function confirmPayment(params: { orderNumber?: string; stripeSessionId?: 
     include: { paymentMethod: true },
   });
   if (!order) return { status: "missing", message: "Order not found." };
-  if (order.status === "PAID") return { status: "paid", message: "Payment confirmed." };
+  if (["PAID", "PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status)) return { status: "paid", message: "Payment confirmed." };
   if (!order.paymentMethod) return { status: "pending", message: "Order received." };
 
   try {
