@@ -138,6 +138,12 @@ export const siteSettingsSchema = z.object({
   heroEyebrow: z.string().min(2).max(80),
   heroTitle: z.string().min(2).max(120),
   heroSubtitle: z.string().min(2).max(260),
+  featureOneTitle: z.string().min(2).max(80),
+  featureOneBody: z.string().min(2).max(180),
+  featureTwoTitle: z.string().min(2).max(80),
+  featureTwoBody: z.string().min(2).max(180),
+  featureThreeTitle: z.string().min(2).max(80),
+  featureThreeBody: z.string().min(2).max(180),
   footerText: z.string().max(500).optional(),
   supportEmail: z.string().email().optional().or(z.literal("")),
 });

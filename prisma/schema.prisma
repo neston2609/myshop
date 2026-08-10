@@ -218,21 +218,27 @@ model AiSettings {
 }
 
 model SiteSettings {
-  id           String   @id @default(cuid())
-  shopName     String   @default("MyShop")
-  logoUrl      String?
-  faviconUrl   String?
-  brandColor   String   @default("#111827")
-  themeMode    String   @default("WHITE")
-  fontFamily   String   @default("TH_SARABUN_PSK")
-  headerLinks  String   @default("")
-  heroEyebrow  String   @default("Minimal commerce, ready to grow")
-  heroTitle    String   @default("Shop essentials with a calmer checkout.")
-  heroSubtitle String   @default("A modern storefront with guest checkout, customer accounts, secure admin controls, uploads, SMTP, payments, and AI configuration.")
-  footerText   String   @default("")
-  supportEmail String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                String   @id @default(cuid())
+  shopName          String   @default("MyShop")
+  logoUrl           String?
+  faviconUrl        String?
+  brandColor        String   @default("#111827")
+  themeMode         String   @default("WHITE")
+  fontFamily        String   @default("TH_SARABUN_PSK")
+  headerLinks       String   @default("")
+  heroEyebrow       String   @default("Minimal commerce, ready to grow")
+  heroTitle         String   @default("Shop essentials with a calmer checkout.")
+  heroSubtitle      String   @default("A modern storefront with guest checkout, customer accounts, secure admin controls, uploads, SMTP, payments, and AI configuration.")
+  featureOneTitle   String   @default("Configurable shipping")
+  featureOneBody    String   @default("Enable regions, delivery fees, and checkout options from admin.")
+  featureTwoTitle   String   @default("Secure by default")
+  featureTwoBody    String   @default("Hashed passwords, signed sessions, validation, and encrypted secrets.")
+  featureThreeTitle String   @default("AI-ready operations")
+  featureThreeBody  String   @default("Choose providers and models for descriptions, SEO text, and assistant features.")
+  footerText        String   @default("")
+  supportEmail      String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model Cart {

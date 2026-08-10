@@ -13,6 +13,12 @@ const defaultHero = {
   subtitle: "A modern storefront with guest checkout, customer accounts, secure admin controls, uploads, SMTP, payments, and AI configuration.",
 };
 
+const defaultFeatures = [
+  { icon: Truck, title: "Configurable shipping", body: "Enable regions, delivery fees, and checkout options from admin." },
+  { icon: ShieldCheck, title: "Secure by default", body: "Hashed passwords, signed sessions, validation, and encrypted secrets." },
+  { icon: Sparkles, title: "AI-ready operations", body: "Choose providers and models for descriptions, SEO text, and assistant features." },
+];
+
 export default async function Home() {
   const [products, categories, settings] = await Promise.all([
     prisma.product.findMany({
@@ -33,6 +39,11 @@ export default async function Home() {
     title: settings?.heroTitle || defaultHero.title,
     subtitle: settings?.heroSubtitle || defaultHero.subtitle,
   };
+  const features = [
+    { ...defaultFeatures[0], title: settings?.featureOneTitle || defaultFeatures[0].title, body: settings?.featureOneBody || defaultFeatures[0].body },
+    { ...defaultFeatures[1], title: settings?.featureTwoTitle || defaultFeatures[1].title, body: settings?.featureTwoBody || defaultFeatures[1].body },
+    { ...defaultFeatures[2], title: settings?.featureThreeTitle || defaultFeatures[2].title, body: settings?.featureThreeBody || defaultFeatures[2].body },
+  ];
 
   return (
     <>
@@ -108,11 +119,7 @@ export default async function Home() {
           </div>
         </section>
         <section className="container-shell grid gap-4 py-10 md:grid-cols-3">
-          {[
-            { icon: Truck, title: "Configurable shipping", body: "Enable regions, delivery fees, and checkout options from admin." },
-            { icon: ShieldCheck, title: "Secure by default", body: "Hashed passwords, signed sessions, validation, and encrypted secrets." },
-            { icon: Sparkles, title: "AI-ready operations", body: "Choose providers and models for descriptions, SEO text, and assistant features." },
-          ].map((item) => {
+          {features.map((item) => {
             const Icon = item.icon;
             return (
               <div key={item.title} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">

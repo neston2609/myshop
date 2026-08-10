@@ -522,6 +522,12 @@ export async function saveSiteSettingsAction(formData: FormData) {
     heroEyebrow: input.heroEyebrow,
     heroTitle: input.heroTitle,
     heroSubtitle: input.heroSubtitle,
+    featureOneTitle: input.featureOneTitle,
+    featureOneBody: input.featureOneBody,
+    featureTwoTitle: input.featureTwoTitle,
+    featureTwoBody: input.featureTwoBody,
+    featureThreeTitle: input.featureThreeTitle,
+    featureThreeBody: input.featureThreeBody,
     footerText: input.footerText || "",
     supportEmail: input.supportEmail || null,
   };
