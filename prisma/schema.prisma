@@ -50,7 +50,12 @@ model User {
   passwordHash String
   role         UserRole       @default(CUSTOMER)
   phone        String?
+  shippingName String?
   address      String?
+  subdistrict  String?
+  district     String?
+  province     String?
+  postalCode   String?
   city         String?
   country      String?
   orders       Order[]

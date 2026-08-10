@@ -1,6 +1,8 @@
 import Image from "next/image";
+import { cookies } from "next/headers";
 import { checkoutAction } from "@/app/actions";
 import { SiteHeader } from "@/components/site-header";
+import { getSession } from "@/lib/auth";
 import { getCart } from "@/lib/cart";
 import { money } from "@/lib/format";
 import { readPaymentCredentials } from "@/lib/payments";
@@ -14,18 +16,68 @@ type BankTransferCredentials = {
   qrCodeUrl?: string;
 };
 
+type SavedShippingAddress = {
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  shippingAddress?: string;
+  shippingSubdistrict?: string;
+  shippingDistrict?: string;
+  shippingProvince?: string;
+  shippingPostalCode?: string;
+};
+
 function bankTransferCredentials(credentials?: string | null): BankTransferCredentials | null {
   const parsed = readPaymentCredentials(credentials);
   if (!parsed.bankName && !parsed.accountName && !parsed.qrCodeUrl) return null;
   return parsed;
 }
 
+function parseSavedShippingAddress(value?: string): SavedShippingAddress {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value) as SavedShippingAddress;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 export default async function CheckoutPage() {
-  const [cart, shippingMethods, paymentMethods] = await Promise.all([
+  const [cart, shippingMethods, paymentMethods, session, cookieStore] = await Promise.all([
     getCart(),
     prisma.shippingMethod.findMany({ where: { enabled: true } }),
     prisma.paymentMethod.findMany({ where: { enabled: true } }),
+    getSession(),
+    cookies(),
   ]);
+  const user = session
+    ? await prisma.user.findUnique({
+        where: { id: session.id },
+        select: {
+          name: true,
+          email: true,
+          phone: true,
+          shippingName: true,
+          address: true,
+          subdistrict: true,
+          district: true,
+          province: true,
+          postalCode: true,
+        },
+      })
+    : null;
+  const savedCookieAddress = parseSavedShippingAddress(cookieStore.get("myshop_shipping_address")?.value);
+  const savedAddress = {
+    customerName: user?.shippingName || user?.name || savedCookieAddress.customerName || "",
+    customerEmail: user?.email || savedCookieAddress.customerEmail || "",
+    customerPhone: user?.phone || savedCookieAddress.customerPhone || "",
+    shippingAddress: user?.address || savedCookieAddress.shippingAddress || "",
+    shippingSubdistrict: user?.subdistrict || savedCookieAddress.shippingSubdistrict || "",
+    shippingDistrict: user?.district || savedCookieAddress.shippingDistrict || "",
+    shippingProvince: user?.province || savedCookieAddress.shippingProvince || "",
+    shippingPostalCode: user?.postalCode || savedCookieAddress.shippingPostalCode || "",
+  };
   const bankTransferMethods = paymentMethods
     .filter((method) => method.provider === "BANK_TRANSFER")
     .map((method) => ({
@@ -42,14 +94,14 @@ export default async function CheckoutPage() {
         <form action={checkoutAction} className="rounded-lg border border-black/10 bg-white p-6">
           <h1 className="text-3xl font-semibold">Checkout</h1>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <input name="customerName" placeholder="ชื่อ" required className="h-11 rounded-md border border-black/10 px-3" />
-            <textarea name="shippingAddress" placeholder="ที่อยู่" required className="min-h-28 rounded-md border border-black/10 px-3 py-3 sm:col-span-2" />
-            <input name="shippingSubdistrict" placeholder="ตำบล" required className="h-11 rounded-md border border-black/10 px-3" />
-            <input name="shippingDistrict" placeholder="อำเภอ" required className="h-11 rounded-md border border-black/10 px-3" />
-            <input name="shippingProvince" placeholder="จังหวัด" required className="h-11 rounded-md border border-black/10 px-3" />
-            <input name="shippingPostalCode" placeholder="เลขไปรษณีย์" required className="h-11 rounded-md border border-black/10 px-3" />
-            <input name="customerPhone" placeholder="เบอร์โทร" required className="h-11 rounded-md border border-black/10 px-3" />
-            <input name="customerEmail" type="email" placeholder="Email" required className="h-11 rounded-md border border-black/10 px-3" />
+            <input name="customerName" defaultValue={savedAddress.customerName} placeholder="ชื่อ" required className="h-11 rounded-md border border-black/10 px-3" />
+            <textarea name="shippingAddress" defaultValue={savedAddress.shippingAddress} placeholder="ที่อยู่" required className="min-h-28 rounded-md border border-black/10 px-3 py-3 sm:col-span-2" />
+            <input name="shippingSubdistrict" defaultValue={savedAddress.shippingSubdistrict} placeholder="ตำบล" required className="h-11 rounded-md border border-black/10 px-3" />
+            <input name="shippingDistrict" defaultValue={savedAddress.shippingDistrict} placeholder="อำเภอ" required className="h-11 rounded-md border border-black/10 px-3" />
+            <input name="shippingProvince" defaultValue={savedAddress.shippingProvince} placeholder="จังหวัด" required className="h-11 rounded-md border border-black/10 px-3" />
+            <input name="shippingPostalCode" defaultValue={savedAddress.shippingPostalCode} placeholder="เลขไปรษณีย์" required className="h-11 rounded-md border border-black/10 px-3" />
+            <input name="customerPhone" defaultValue={savedAddress.customerPhone} placeholder="เบอร์โทร" required className="h-11 rounded-md border border-black/10 px-3" />
+            <input name="customerEmail" type="email" defaultValue={savedAddress.customerEmail} placeholder="Email" required className="h-11 rounded-md border border-black/10 px-3" />
             <select name="shippingMethodId" required className="h-11 rounded-md border border-black/10 px-3">
               {shippingMethods.map((method) => {
                 const threshold = method.freeShippingThreshold ? Number(method.freeShippingThreshold) : null;
@@ -63,6 +115,10 @@ export default async function CheckoutPage() {
             <select name="paymentMethodId" required className="h-11 rounded-md border border-black/10 px-3">
               {paymentMethods.map((method) => <option key={method.id} value={method.id}>{method.name}</option>)}
             </select>
+            <label className="flex items-center gap-2 rounded-md border border-black/10 bg-slate-50 px-3 py-2 text-sm sm:col-span-2">
+              <input name="saveShippingAddress" type="checkbox" defaultChecked />
+              บันทึกที่อยู่นี้ไว้ใช้สำหรับการสั่งซื้อครั้งถัดไป
+            </label>
             {bankTransferMethods.length > 0 ? (
               <div className="grid gap-3 rounded-md border border-black/10 bg-slate-50 p-4 sm:col-span-2">
                 <h2 className="font-semibold">Bank transfer details</h2>

@@ -23,7 +23,6 @@ export default async function Home() {
     }),
     prisma.category.findMany({
       where: { active: true },
-      take: 4,
       orderBy: { name: "asc" },
       include: { _count: { select: { products: true } } },
     }),

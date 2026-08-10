@@ -46,6 +46,7 @@ export const checkoutSchema = z.object({
   shippingPostalCode: z.string().min(4).max(12),
   shippingMethodId: z.string().min(1),
   paymentMethodId: z.string().min(1),
+  saveShippingAddress: z.coerce.boolean().default(true),
 });
 
 export const productSchema = z.object({

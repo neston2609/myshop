@@ -3,7 +3,7 @@
 import type { Prisma } from "@prisma/client";
 import { nanoid } from "nanoid";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { addCartItem, clearCart, getCart, updateCartItem } from "@/lib/cart";
 import { createSession, destroySession, findUserByEmail, findUserByIdentifier, getSession, hashPassword, verifyPassword } from "@/lib/auth";
@@ -29,6 +29,64 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 function formValue(formData: FormData, name: string) {
   return String(formData.get(name) || "");
+}
+
+const savedShippingCookie = "myshop_shipping_address";
+
+type CheckoutAddressInput = {
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  shippingAddress: string;
+  shippingSubdistrict: string;
+  shippingDistrict: string;
+  shippingProvince: string;
+  shippingPostalCode: string;
+  saveShippingAddress: boolean;
+};
+
+async function rememberShippingAddress(input: CheckoutAddressInput, userId?: string) {
+  const store = await cookies();
+  if (!input.saveShippingAddress) {
+    store.delete(savedShippingCookie);
+    return;
+  }
+
+  const savedAddress = {
+    customerName: input.customerName,
+    customerEmail: input.customerEmail,
+    customerPhone: input.customerPhone,
+    shippingAddress: input.shippingAddress,
+    shippingSubdistrict: input.shippingSubdistrict,
+    shippingDistrict: input.shippingDistrict,
+    shippingProvince: input.shippingProvince,
+    shippingPostalCode: input.shippingPostalCode,
+  };
+
+  store.set(savedShippingCookie, JSON.stringify(savedAddress), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 180,
+  });
+
+  if (userId) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        shippingName: input.customerName,
+        phone: input.customerPhone,
+        address: input.shippingAddress,
+        subdistrict: input.shippingSubdistrict,
+        district: input.shippingDistrict,
+        province: input.shippingProvince,
+        postalCode: input.shippingPostalCode,
+        city: input.shippingProvince,
+        country: "Thailand",
+      },
+    });
+  }
 }
 
 function uploadedImageUrls(input: { imageUrl?: string; imageUrls?: string }) {
@@ -121,7 +179,7 @@ export async function changePasswordAction(formData: FormData) {
 }
 
 export async function checkoutAction(formData: FormData) {
-  const input = checkoutSchema.parse(Object.fromEntries(formData));
+  const input = checkoutSchema.parse({ ...Object.fromEntries(formData), saveShippingAddress: formData.has("saveShippingAddress") });
   const cart = await getCart();
   if (cart.items.length === 0) redirect("/cart");
 
@@ -179,6 +237,8 @@ export async function checkoutAction(formData: FormData) {
 
     return created;
   });
+
+  await rememberShippingAddress(input, session?.id);
 
   if (paymentMethod.provider === "STRIPE") {
     const paymentUrl = await createStripeCheckoutSession({
