@@ -2,6 +2,7 @@ import Image from "next/image";
 import { cookies } from "next/headers";
 import { checkoutAction } from "@/app/actions";
 import { SiteHeader } from "@/components/site-header";
+import { ThaiAddressFields } from "@/components/thai-address-fields";
 import { getSession } from "@/lib/auth";
 import { getCart } from "@/lib/cart";
 import { money } from "@/lib/format";
@@ -94,14 +95,7 @@ export default async function CheckoutPage() {
         <form action={checkoutAction} className="rounded-lg border border-black/10 bg-white p-6">
           <h1 className="text-3xl font-semibold">Checkout</h1>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <input name="customerName" defaultValue={savedAddress.customerName} placeholder="ชื่อ" required className="h-11 rounded-md border border-black/10 px-3" />
-            <textarea name="shippingAddress" defaultValue={savedAddress.shippingAddress} placeholder="ที่อยู่" required className="min-h-28 rounded-md border border-black/10 px-3 py-3 sm:col-span-2" />
-            <input name="shippingSubdistrict" defaultValue={savedAddress.shippingSubdistrict} placeholder="ตำบล" required className="h-11 rounded-md border border-black/10 px-3" />
-            <input name="shippingDistrict" defaultValue={savedAddress.shippingDistrict} placeholder="อำเภอ" required className="h-11 rounded-md border border-black/10 px-3" />
-            <input name="shippingProvince" defaultValue={savedAddress.shippingProvince} placeholder="จังหวัด" required className="h-11 rounded-md border border-black/10 px-3" />
-            <input name="shippingPostalCode" defaultValue={savedAddress.shippingPostalCode} placeholder="เลขไปรษณีย์" required className="h-11 rounded-md border border-black/10 px-3" />
-            <input name="customerPhone" defaultValue={savedAddress.customerPhone} placeholder="เบอร์โทร" required className="h-11 rounded-md border border-black/10 px-3" />
-            <input name="customerEmail" type="email" defaultValue={savedAddress.customerEmail} placeholder="Email" required className="h-11 rounded-md border border-black/10 px-3" />
+            <ThaiAddressFields savedAddress={savedAddress} />
             <select name="shippingMethodId" required className="h-11 rounded-md border border-black/10 px-3">
               {shippingMethods.map((method) => {
                 const threshold = method.freeShippingThreshold ? Number(method.freeShippingThreshold) : null;
