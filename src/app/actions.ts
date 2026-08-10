@@ -1,5 +1,6 @@
 "use server";
 
+import type { Prisma } from "@prisma/client";
 import { nanoid } from "nanoid";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -28,6 +29,25 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 function formValue(formData: FormData, name: string) {
   return String(formData.get(name) || "");
+}
+
+function uploadedImageUrls(input: { imageUrl?: string; imageUrls?: string }) {
+  const urls = new Set<string>();
+  try {
+    const parsed = JSON.parse(input.imageUrls || "[]") as unknown;
+    if (Array.isArray(parsed)) {
+      for (const item of parsed) {
+        if (typeof item === "string" && (item.startsWith("/uploads/") || item.startsWith("http://") || item.startsWith("https://"))) {
+          urls.add(item);
+        }
+      }
+    }
+  } catch {
+    // Fall back to the single-image field below.
+  }
+
+  if (input.imageUrl) urls.add(input.imageUrl);
+  return [...urls].slice(0, 12);
 }
 
 async function requestOrigin() {
@@ -113,7 +133,9 @@ export async function checkoutAction(formData: FormData) {
 
   if (!shippingMethod || !paymentMethod) redirect("/checkout?message=configuration");
 
-  const shippingCost = Number(shippingMethod.cost);
+  const baseShippingCost = Number(shippingMethod.cost);
+  const freeShippingThreshold = shippingMethod.freeShippingThreshold ? Number(shippingMethod.freeShippingThreshold) : null;
+  const shippingCost = freeShippingThreshold && cart.subtotal >= freeShippingThreshold ? 0 : baseShippingCost;
   const order = await prisma.$transaction(async (tx) => {
     const created = await tx.order.create({
       data: {
@@ -123,8 +145,12 @@ export async function checkoutAction(formData: FormData) {
         customerEmail: input.customerEmail,
         customerPhone: input.customerPhone,
         shippingAddress: input.shippingAddress,
-        shippingCity: input.shippingCity,
-        shippingCountry: input.shippingCountry,
+        shippingSubdistrict: input.shippingSubdistrict,
+        shippingDistrict: input.shippingDistrict,
+        shippingProvince: input.shippingProvince,
+        shippingPostalCode: input.shippingPostalCode,
+        shippingCity: input.shippingProvince,
+        shippingCountry: "Thailand",
         subtotal: cart.subtotal,
         shippingCost,
         total: cart.subtotal + shippingCost,
@@ -222,10 +248,9 @@ export async function saveProductAction(formData: FormData) {
     : await prisma.product.create({ data });
 
   await prisma.productMedia.deleteMany({ where: { productId: product.id } });
-  const media = [
-    input.imageUrl ? { productId: product.id, type: "IMAGE" as const, url: input.imageUrl, alt: input.name } : null,
-    input.youtubeUrl ? { productId: product.id, type: "YOUTUBE" as const, url: input.youtubeUrl, alt: input.name } : null,
-  ].filter((item): item is NonNullable<typeof item> => item !== null);
+  const imageUrls = uploadedImageUrls(input);
+  const media: Prisma.ProductMediaCreateManyInput[] = imageUrls.map((url, index) => ({ productId: product.id, type: "IMAGE", url, alt: input.name, sortOrder: index }));
+  if (input.youtubeUrl) media.push({ productId: product.id, type: "YOUTUBE" as const, url: input.youtubeUrl, alt: input.name, sortOrder: imageUrls.length });
   if (media.length) await prisma.productMedia.createMany({ data: media });
   revalidatePath("/admin/products");
   revalidatePath("/shop");
@@ -299,6 +324,7 @@ export async function saveShippingAction(formData: FormData) {
     name: input.name,
     regions: input.regions.split(",").map((item) => item.trim()).filter(Boolean),
     cost: input.cost,
+    freeShippingThreshold: input.freeShippingThreshold ?? null,
     enabled: input.enabled,
   };
   if (id) await prisma.shippingMethod.update({ where: { id }, data });

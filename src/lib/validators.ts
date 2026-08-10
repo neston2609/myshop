@@ -38,10 +38,12 @@ export const changePasswordSchema = z.object({
 export const checkoutSchema = z.object({
   customerName: z.string().min(2).max(120),
   customerEmail: emailSchema,
-  customerPhone: z.string().max(40).optional(),
+  customerPhone: z.string().min(6).max(40),
   shippingAddress: z.string().min(6).max(240),
-  shippingCity: z.string().min(2).max(80),
-  shippingCountry: z.string().min(2).max(80),
+  shippingSubdistrict: z.string().min(2).max(80),
+  shippingDistrict: z.string().min(2).max(80),
+  shippingProvince: z.string().min(2).max(80),
+  shippingPostalCode: z.string().min(4).max(12),
   shippingMethodId: z.string().min(1),
   paymentMethodId: z.string().min(1),
 });
@@ -55,6 +57,7 @@ export const productSchema = z.object({
   categoryId: z.string().min(1),
   active: z.coerce.boolean().default(true),
   imageUrl: uploadedImageSchema.optional(),
+  imageUrls: z.string().optional(),
   youtubeUrl: z.string().url().optional().or(z.literal("")),
 });
 
@@ -69,6 +72,7 @@ export const shippingSchema = z.object({
   name: z.string().min(2).max(100),
   regions: z.string().min(2),
   cost: z.coerce.number().min(0),
+  freeShippingThreshold: z.preprocess((value) => value === "" ? undefined : value, z.coerce.number().min(0).optional()),
   enabled: z.coerce.boolean().default(true),
 });
 

@@ -45,18 +45,21 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
               {message}
             </p>
           ) : null}
-          {orders.map((order) => (
-            <article key={order.id} className="rounded-lg border border-black/10 bg-white p-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="font-semibold">{order.orderNumber}</p>
-                  <p className="text-sm text-slate-500">{order.createdAt.toLocaleDateString()} - {order.status}</p>
+          {orders.map((order) => {
+            const destination = [order.shippingProvince || order.shippingCity, order.shippingPostalCode].filter(Boolean).join(" ");
+            return (
+              <article key={order.id} className="rounded-lg border border-black/10 bg-white p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold">{order.orderNumber}</p>
+                    <p className="text-sm text-slate-500">{order.createdAt.toLocaleDateString()} - {order.status}</p>
+                  </div>
+                  <strong>{money(order.total)}</strong>
                 </div>
-                <strong>{money(order.total)}</strong>
-              </div>
-              <p className="mt-3 text-sm text-slate-600">{order.items.length} items shipped to {order.shippingCity}, {order.shippingCountry}</p>
-            </article>
-          ))}
+                <p className="mt-3 text-sm text-slate-600">{order.items.length} items shipped to {destination || order.shippingCountry}</p>
+              </article>
+            );
+          })}
           {orders.length === 0 ? <p className="rounded-lg border border-black/10 bg-white p-6 text-slate-600">No orders yet.</p> : null}
           </div>
           <form action={changePasswordAction} className="grid h-fit gap-3 rounded-lg border border-black/10 bg-white p-5">

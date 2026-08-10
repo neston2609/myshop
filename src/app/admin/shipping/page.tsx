@@ -12,12 +12,15 @@ export default async function AdminShippingPage() {
         <div className="mt-4 divide-y divide-black/10">
           {shippingMethods.map((method) => (
             <details key={method.id} className="group py-3 text-sm">
-              <summary className="grid cursor-pointer list-none items-center gap-3 rounded-md p-2 hover:bg-slate-50 md:grid-cols-[1fr_120px_90px_140px]">
+              <summary className="grid cursor-pointer list-none items-center gap-3 rounded-md p-2 hover:bg-slate-50 md:grid-cols-[1fr_120px_170px_90px_140px]">
                 <span className="font-medium">
                   {method.name}
                   <span className="ml-2 text-slate-400">{method.regions.join(", ")}</span>
                 </span>
                 <span>{money(method.cost)}</span>
+                <span className="text-slate-500">
+                  {method.freeShippingThreshold ? `Free over ${money(method.freeShippingThreshold)}` : "No promotion"}
+                </span>
                 <span>{method.enabled ? "Enabled" : "Disabled"}</span>
                 <span className="text-xs text-slate-500">Click to edit</span>
               </summary>
@@ -27,6 +30,7 @@ export default async function AdminShippingPage() {
                   name={method.name}
                   regions={method.regions.join(", ")}
                   cost={method.cost.toString()}
+                  freeShippingThreshold={method.freeShippingThreshold?.toString() || ""}
                   enabled={method.enabled}
                   submitLabel="Save changes"
                 />
@@ -60,6 +64,7 @@ function ShippingForm({
   name = "",
   regions = "",
   cost = "",
+  freeShippingThreshold = "",
   enabled = true,
   submitLabel,
 }: {
@@ -67,6 +72,7 @@ function ShippingForm({
   name?: string;
   regions?: string;
   cost?: string;
+  freeShippingThreshold?: string;
   enabled?: boolean;
   submitLabel: string;
 }) {
@@ -77,6 +83,7 @@ function ShippingForm({
       <input name="name" defaultValue={name} placeholder="Name" required className="h-10 rounded-md border border-black/10 px-3" />
       <input name="regions" defaultValue={regions} placeholder="US, TH, EU" required className="h-10 rounded-md border border-black/10 px-3" />
       <input name="cost" defaultValue={cost} type="number" step="0.01" placeholder="Cost" required className="h-10 rounded-md border border-black/10 px-3" />
+      <input name="freeShippingThreshold" defaultValue={freeShippingThreshold} type="number" step="0.01" placeholder="Free shipping when order reaches" className="h-10 rounded-md border border-black/10 px-3" />
       <label className="flex items-center gap-2 text-sm"><input name="enabled" type="checkbox" defaultChecked={enabled} /> Enabled</label>
       <button className="h-10 rounded-md bg-[#17201c] font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#223329] active:translate-y-0">
         {submitLabel}

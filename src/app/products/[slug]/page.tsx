@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { addToCartAction } from "@/app/actions";
+import { ProductImageGallery } from "@/components/product-image-gallery";
 import { SiteHeader } from "@/components/site-header";
 import { money, youtubeEmbed } from "@/lib/format";
 import { sanitizeProductHtml } from "@/lib/html";
@@ -36,16 +36,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
       <main className="container-shell py-10">
         <div className="grid gap-10 lg:grid-cols-[1fr_0.8fr]">
           <section className="grid gap-4">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-slate-100">
-              <Image src={images[0]?.url || "/window.svg"} alt={images[0]?.alt || product.name} fill className="object-cover" sizes="(min-width: 1024px) 55vw, 100vw" />
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              {images.slice(1, 4).map((image) => (
-                <div key={image.id} className="relative aspect-[4/3] overflow-hidden rounded-md bg-slate-100">
-                  <Image src={image.url} alt={image.alt || product.name} fill className="object-cover" sizes="20vw" />
-                </div>
-              ))}
-            </div>
+            <ProductImageGallery
+              images={images.map((image) => ({
+                id: image.id,
+                url: image.url,
+                alt: image.alt || product.name,
+              }))}
+              fallbackAlt={product.name}
+            />
             {embed ? (
               <iframe
                 src={embed}

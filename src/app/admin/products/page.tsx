@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { deleteProductAction, saveProductAction } from "@/app/actions";
 import { AiDescriptionButton } from "@/components/ai-description-button";
-import { ImageUploadField } from "@/components/image-upload-field";
+import { MultiImageUploadField } from "@/components/multi-image-upload-field";
 import { RichHtmlEditor } from "@/components/rich-html-editor";
 import { money } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -18,7 +18,8 @@ export default async function AdminProductsPage() {
         <h2 className="font-semibold">Products</h2>
         <div className="mt-4 divide-y divide-black/10">
           {products.map((product) => {
-            const imageUrl = product.media.find((media) => media.type === "IMAGE")?.url || "";
+            const imageUrls = product.media.filter((media) => media.type === "IMAGE").map((media) => media.url);
+            const imageUrl = imageUrls[0] || "";
             const youtubeUrl = product.media.find((media) => media.type === "YOUTUBE")?.url || "";
             return (
               <details key={product.id} className="group py-3 text-sm">
@@ -48,15 +49,15 @@ export default async function AdminProductsPage() {
                     <select name="categoryId" defaultValue={product.categoryId} required className="h-10 rounded-md border border-black/10 bg-white px-3">
                       {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
                     </select>
-                    <ImageUploadField name="imageUrl" label="Product image" defaultValue={imageUrl} />
+                    <MultiImageUploadField name="imageUrls" label="Product images" defaultValues={imageUrls} />
                     <AiDescriptionButton />
                     <input name="youtubeUrl" defaultValue={youtubeUrl} placeholder="YouTube URL" className="h-10 rounded-md border border-black/10 bg-white px-3" />
                     <label className="flex items-center gap-2 text-sm"><input name="active" type="checkbox" defaultChecked={product.active} /> Active</label>
-                    <button className="h-10 rounded-md bg-[#17201c] font-semibold text-white">Save changes</button>
+                    <button className="h-10 rounded-md bg-[#17201c] font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#223329] active:translate-y-0">Save changes</button>
                   </form>
                   <form action={deleteProductAction}>
                     <input type="hidden" name="id" value={product.id} />
-                    <button className="h-10 rounded-md border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-700">Delete product</button>
+                    <button className="h-10 rounded-md border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-700 transition hover:-translate-y-0.5 hover:bg-red-100 active:translate-y-0">Delete product</button>
                   </form>
                 </div>
               </details>
@@ -74,11 +75,11 @@ export default async function AdminProductsPage() {
         <select name="categoryId" required className="h-10 rounded-md border border-black/10 px-3">
           {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
         </select>
-        <ImageUploadField name="imageUrl" label="Product image" />
+        <MultiImageUploadField name="imageUrls" label="Product images" />
         <AiDescriptionButton />
         <input name="youtubeUrl" placeholder="YouTube URL" className="h-10 rounded-md border border-black/10 px-3" />
         <label className="flex items-center gap-2 text-sm"><input name="active" type="checkbox" defaultChecked /> Active</label>
-        <button className="h-10 rounded-md bg-[#17201c] font-semibold text-white">Save product</button>
+        <button className="h-10 rounded-md bg-[#17201c] font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#223329] active:translate-y-0">Save product</button>
       </form>
     </div>
   );

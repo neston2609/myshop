@@ -42,14 +42,23 @@ export default async function CheckoutPage() {
         <form action={checkoutAction} className="rounded-lg border border-black/10 bg-white p-6">
           <h1 className="text-3xl font-semibold">Checkout</h1>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <input name="customerName" placeholder="Full name" required className="h-11 rounded-md border border-black/10 px-3" />
+            <input name="customerName" placeholder="ชื่อ" required className="h-11 rounded-md border border-black/10 px-3" />
+            <textarea name="shippingAddress" placeholder="ที่อยู่" required className="min-h-28 rounded-md border border-black/10 px-3 py-3 sm:col-span-2" />
+            <input name="shippingSubdistrict" placeholder="ตำบล" required className="h-11 rounded-md border border-black/10 px-3" />
+            <input name="shippingDistrict" placeholder="อำเภอ" required className="h-11 rounded-md border border-black/10 px-3" />
+            <input name="shippingProvince" placeholder="จังหวัด" required className="h-11 rounded-md border border-black/10 px-3" />
+            <input name="shippingPostalCode" placeholder="เลขไปรษณีย์" required className="h-11 rounded-md border border-black/10 px-3" />
+            <input name="customerPhone" placeholder="เบอร์โทร" required className="h-11 rounded-md border border-black/10 px-3" />
             <input name="customerEmail" type="email" placeholder="Email" required className="h-11 rounded-md border border-black/10 px-3" />
-            <input name="customerPhone" placeholder="Phone" className="h-11 rounded-md border border-black/10 px-3" />
-            <input name="shippingCity" placeholder="City" required className="h-11 rounded-md border border-black/10 px-3" />
-            <input name="shippingCountry" placeholder="Country" required className="h-11 rounded-md border border-black/10 px-3" />
-            <textarea name="shippingAddress" placeholder="Shipping address" required className="min-h-28 rounded-md border border-black/10 px-3 py-3 sm:col-span-2" />
             <select name="shippingMethodId" required className="h-11 rounded-md border border-black/10 px-3">
-              {shippingMethods.map((method) => <option key={method.id} value={method.id}>{method.name} - {money(method.cost)}</option>)}
+              {shippingMethods.map((method) => {
+                const threshold = method.freeShippingThreshold ? Number(method.freeShippingThreshold) : null;
+                const qualifies = threshold !== null && cart.subtotal >= threshold;
+                const label = threshold
+                  ? `${method.name} - ${qualifies ? "ส่งฟรี" : money(method.cost)} (ส่งฟรีเมื่อซื้อครบ ${money(threshold)})`
+                  : `${method.name} - ${money(method.cost)}`;
+                return <option key={method.id} value={method.id}>{label}</option>;
+              })}
             </select>
             <select name="paymentMethodId" required className="h-11 rounded-md border border-black/10 px-3">
               {paymentMethods.map((method) => <option key={method.id} value={method.id}>{method.name}</option>)}
