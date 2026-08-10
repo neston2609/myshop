@@ -94,28 +94,45 @@ export default async function CheckoutPage() {
       <main className="container-shell grid gap-8 py-10 lg:grid-cols-[1fr_360px]">
         <form action={checkoutAction} className="rounded-lg border border-black/10 bg-white p-6">
           <h1 className="text-3xl font-semibold">Checkout</h1>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <ThaiAddressFields savedAddress={savedAddress} />
-            <select name="shippingMethodId" required className="h-11 rounded-md border border-black/10 px-3">
-              {shippingMethods.map((method) => {
-                const threshold = method.freeShippingThreshold ? Number(method.freeShippingThreshold) : null;
-                const qualifies = threshold !== null && cart.subtotal >= threshold;
-                const label = threshold
-                  ? `${method.name} - ${qualifies ? "ส่งฟรี" : money(method.cost)} (ส่งฟรีเมื่อซื้อครบ ${money(threshold)})`
-                  : `${method.name} - ${money(method.cost)}`;
-                return <option key={method.id} value={method.id}>{label}</option>;
-              })}
-            </select>
-            <select name="paymentMethodId" required className="h-11 rounded-md border border-black/10 px-3">
-              {paymentMethods.map((method) => <option key={method.id} value={method.id}>{method.name}</option>)}
-            </select>
-            <label className="flex items-center gap-2 rounded-md border border-black/10 bg-slate-50 px-3 py-2 text-sm sm:col-span-2">
+          <section className="mt-6">
+            <h2 className="text-xl font-semibold">ข้อมูลจัดส่ง</h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <ThaiAddressFields savedAddress={savedAddress} />
+            </div>
+            <label className="mt-4 flex items-center gap-2 rounded-md border border-black/10 bg-slate-50 px-3 py-2 text-sm">
               <input name="saveShippingAddress" type="checkbox" defaultChecked />
               บันทึกที่อยู่นี้ไว้ใช้สำหรับการสั่งซื้อครั้งถัดไป
             </label>
+          </section>
+
+          <section className="mt-8 border-t border-black/10 pt-6">
+            <h2 className="text-xl font-semibold">วิธีจัดส่ง</h2>
+            <label className="mt-4 grid gap-1.5 text-sm font-semibold text-slate-800">
+              <span>เลือกวิธีจัดส่ง</span>
+              <select name="shippingMethodId" required className="h-11 rounded-md border border-black/10 bg-white px-3 text-base outline-none transition focus:border-[#0f766e] focus:ring-2 focus:ring-[#0f766e]/15">
+                {shippingMethods.map((method) => {
+                  const threshold = method.freeShippingThreshold ? Number(method.freeShippingThreshold) : null;
+                  const qualifies = threshold !== null && cart.subtotal >= threshold;
+                  const label = threshold
+                    ? `${method.name} - ${qualifies ? "ส่งฟรี" : money(method.cost)} (ส่งฟรีเมื่อซื้อครบ ${money(threshold)})`
+                    : `${method.name} - ${money(method.cost)}`;
+                  return <option key={method.id} value={method.id}>{label}</option>;
+                })}
+              </select>
+            </label>
+          </section>
+
+          <section className="mt-8 border-t border-black/10 pt-6">
+            <h2 className="text-xl font-semibold">การชำระเงิน</h2>
+            <label className="mt-4 grid gap-1.5 text-sm font-semibold text-slate-800">
+              <span>เลือกวิธีชำระเงิน</span>
+              <select name="paymentMethodId" required className="h-11 rounded-md border border-black/10 bg-white px-3 text-base outline-none transition focus:border-[#0f766e] focus:ring-2 focus:ring-[#0f766e]/15">
+                {paymentMethods.map((method) => <option key={method.id} value={method.id}>{method.name}</option>)}
+              </select>
+            </label>
             {bankTransferMethods.length > 0 ? (
-              <div className="grid gap-3 rounded-md border border-black/10 bg-slate-50 p-4 sm:col-span-2">
-                <h2 className="font-semibold">Bank transfer details</h2>
+              <div className="mt-4 grid gap-3 rounded-md border border-black/10 bg-slate-50 p-4">
+                <h3 className="font-semibold">รายละเอียดโอนเงินผ่านธนาคาร</h3>
                 {bankTransferMethods.map((method) => (
                   <div key={method.id} className="flex flex-col gap-3 rounded-md bg-white p-3 sm:flex-row sm:items-center">
                     {method.credentials?.qrCodeUrl ? (
@@ -130,7 +147,7 @@ export default async function CheckoutPage() {
                 ))}
               </div>
             ) : null}
-          </div>
+          </section>
           <button disabled={cart.items.length === 0} className="mt-6 h-12 w-full rounded-md bg-[#17201c] font-semibold text-white disabled:opacity-40">
             Place order
           </button>
