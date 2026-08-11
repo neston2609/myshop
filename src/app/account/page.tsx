@@ -28,7 +28,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
   const params = await searchParams;
   const requestedPage = Number(params.page || "1");
   const currentPage = Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 1;
-  const orderWhere = { OR: [{ userId: session.id }, { customerEmail: session.email }] };
+  const orderWhere = { userId: session.id };
   const message = {
     "password-changed": "Password changed successfully.",
     "password-invalid": "Current password is incorrect.",

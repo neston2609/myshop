@@ -345,7 +345,7 @@ export async function payOrderAction(formData: FormData) {
   const order = await prisma.order.findFirst({
     where: {
       id: orderId,
-      OR: [{ userId: session.id }, { customerEmail: session.email }],
+      userId: session.id,
     },
     include: { items: true, paymentMethod: true },
   });
@@ -392,7 +392,7 @@ export async function cancelOrderAction(formData: FormData) {
   const order = await prisma.order.findFirst({
     where: {
       id: orderId,
-      OR: [{ userId: session.id }, { customerEmail: session.email }],
+      userId: session.id,
     },
     include: { items: true },
   });
@@ -458,7 +458,7 @@ export async function submitPaymentProofAction(formData: FormData) {
   const order = await prisma.order.findFirst({
     where: {
       id: input.orderId,
-      OR: [{ userId: session.id }, { customerEmail: session.email }],
+      userId: session.id,
     },
     include: { paymentMethod: true },
   });
