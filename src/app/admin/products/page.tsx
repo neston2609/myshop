@@ -14,10 +14,12 @@ type AdminProductsPageProps = {
 export default async function AdminProductsPage({ searchParams }: AdminProductsPageProps) {
   const params = await searchParams;
   const message = {
+    "product-saved": "Product saved.",
     "product-deleted": "Product deleted.",
     "product-not-found": "Product was not found.",
+    "sku-taken": "SKU is already used by another product.",
   }[params.message || ""];
-  const isError = params.message === "product-not-found";
+  const isError = params.message === "product-not-found" || params.message === "sku-taken";
   const selectedCategory = params.category || "";
   const [products, categories] = await Promise.all([
     prisma.product.findMany({

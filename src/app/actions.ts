@@ -40,6 +40,19 @@ function formValue(formData: FormData, name: string) {
   return String(formData.get(name) || "");
 }
 
+async function uniqueProductSlug(name: string, sku: string, productId?: string) {
+  const baseSlug = slugify(name) || slugify(sku) || `product-${nanoid(8)}`;
+  let candidate = baseSlug;
+  let suffix = 2;
+
+  while (true) {
+    const existing = await prisma.product.findUnique({ where: { slug: candidate }, select: { id: true } });
+    if (!existing || existing.id === productId) return candidate;
+    candidate = `${baseSlug}-${suffix}`;
+    suffix++;
+  }
+}
+
 const savedShippingCookie = "myshop_shipping_address";
 
 type CheckoutAddressInput = {
@@ -452,7 +465,11 @@ export async function saveProductAction(formData: FormData) {
   await requireAdmin();
   const input = productSchema.parse({ ...Object.fromEntries(formData), active: formData.has("active") });
   const id = formValue(formData, "id");
-  const slug = slugify(input.name);
+  const existingProduct = id ? await prisma.product.findUnique({ where: { id }, select: { id: true, slug: true } }) : null;
+  if (id && !existingProduct) redirect("/admin/products?message=product-not-found");
+  const existingSku = await prisma.product.findUnique({ where: { sku: input.sku }, select: { id: true } });
+  if (existingSku && existingSku.id !== id) redirect("/admin/products?message=sku-taken");
+  const slug = await uniqueProductSlug(input.name, input.sku, id || undefined);
   const data = {
     name: input.name,
     slug,
@@ -475,8 +492,10 @@ export async function saveProductAction(formData: FormData) {
   if (media.length) await prisma.productMedia.createMany({ data: media });
   revalidatePath("/admin/products");
   revalidatePath("/shop");
+  if (existingProduct?.slug && existingProduct.slug !== product.slug) revalidatePath(`/products/${existingProduct.slug}`);
   revalidatePath(`/products/${product.slug}`);
   revalidatePath("/");
+  redirect("/admin/products?message=product-saved");
 }
 
 export async function deleteProductAction(formData: FormData) {
