@@ -153,10 +153,12 @@ export async function updateCartAction(formData: FormData) {
 }
 
 export async function registerAction(formData: FormData) {
-  const input = registerSchema.parse(Object.fromEntries(formData));
+  const parsed = registerSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect("/register?message=invalid");
+  const input = parsed.data;
   const username = input.username ? input.username.toLowerCase() : null;
   const existing = await findUserByEmail(input.email);
-  if (existing) redirect("/login?message=account-exists");
+  if (existing) redirect("/register?message=email-taken");
   if (username) {
     const usernameTaken = await prisma.user.findUnique({ where: { username } });
     if (usernameTaken) redirect("/register?message=username-taken");
@@ -174,7 +176,9 @@ export async function registerAction(formData: FormData) {
 }
 
 export async function loginAction(formData: FormData) {
-  const input = loginSchema.parse(Object.fromEntries(formData));
+  const parsed = loginSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect("/login?message=invalid");
+  const input = parsed.data;
   if (!checkRateLimit(`login:${input.identifier.toLowerCase()}`)) redirect("/login?message=rate-limited");
   const user = await findUserByIdentifier(input.identifier);
   if (!user || !(await verifyPassword(input.password, user.passwordHash))) {
@@ -192,7 +196,9 @@ export async function logoutAction() {
 export async function changePasswordAction(formData: FormData) {
   const session = await getSession();
   if (!session) redirect("/login");
-  const input = changePasswordSchema.parse(Object.fromEntries(formData));
+  const parsed = changePasswordSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect("/account?message=password-invalid");
+  const input = parsed.data;
   const user = await prisma.user.findUnique({ where: { id: session.id } });
   if (!user || !(await verifyPassword(input.currentPassword, user.passwordHash))) {
     redirect("/account?message=password-invalid");
