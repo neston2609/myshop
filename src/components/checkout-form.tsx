@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { checkoutAction } from "@/app/actions";
 import { BankLogo } from "@/components/bank-logo";
@@ -60,9 +61,11 @@ export function CheckoutForm({
   const [postalCode, setPostalCode] = useState(savedAddress.shippingPostalCode);
   const [shippingMethodId, setShippingMethodId] = useState(shippingMethods[0]?.id || "");
   const [paymentMethodId, setPaymentMethodId] = useState(paymentMethods[0]?.id || "");
+  const router = useRouter();
 
   const selectedShipping = shippingMethods.find((method) => method.id === shippingMethodId) || shippingMethods[0];
   const selectedPayment = paymentMethods.find((method) => method.id === paymentMethodId) || paymentMethods[0];
+  const cartIsEmpty = cartItems.length === 0;
   const pricing = useMemo(() => {
     if (!selectedShipping) {
       return { baseShipping: 0, remoteAreaFee: 0, shippingCost: 0, isRemoteArea: false, paymentFee: 0, total: subtotal };
@@ -75,6 +78,11 @@ export function CheckoutForm({
       settings,
     });
   }, [postalCode, selectedPayment, selectedShipping, settings, subtotal]);
+
+  function handleEmptyCart() {
+    window.alert("ไม่มีสินค้าในตะกร้า กรุณาเลือกสินค้าก่อนทำรายการ");
+    router.push("/shop");
+  }
 
   return (
     <main className="container-shell grid gap-8 py-10 lg:grid-cols-[1fr_360px]">
@@ -154,7 +162,11 @@ export function CheckoutForm({
             </div>
           ) : null}
         </section>
-        <button disabled={cartItems.length === 0} className="mt-6 h-12 w-full rounded-md bg-[#17201c] font-semibold text-white disabled:opacity-40">
+        <button
+          type={cartIsEmpty ? "button" : "submit"}
+          onClick={cartIsEmpty ? handleEmptyCart : undefined}
+          className="mt-6 h-12 w-full rounded-md bg-[#17201c] font-semibold text-white transition hover:bg-[#0f766e] active:translate-y-px"
+        >
           Place order
         </button>
       </form>
