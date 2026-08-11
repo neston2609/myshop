@@ -25,17 +25,20 @@ import {
   downloadCategorySchema,
   downloadHideRuleSchema,
   downloadSourceSchema,
+  forgotPasswordSchema,
   loginSchema,
   orderTrackingSchema,
   paymentProofSchema,
   paymentSchema,
   productSchema,
   registerSchema,
+  resetPasswordSchema,
   shippingSchema,
   siteSettingsSchema,
   smtpSchema,
 } from "@/lib/validators";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { createPasswordResetToken, hashPasswordResetToken, sendPasswordResetEmail } from "@/lib/password-reset";
 
 function formValue(formData: FormData, name: string) {
   return String(formData.get(name) || "");
@@ -209,6 +212,82 @@ export async function changePasswordAction(formData: FormData) {
     data: { passwordHash: await hashPassword(input.newPassword) },
   });
   redirect("/account?message=password-changed");
+}
+
+export async function forgotPasswordAction(formData: FormData) {
+  const parsed = forgotPasswordSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect("/forgot-password?message=sent");
+
+  const identifier = parsed.data.identifier.toLowerCase();
+  if (!checkRateLimit(`forgot-password:${identifier}`)) redirect("/forgot-password?message=rate-limited");
+
+  const user = await findUserByIdentifier(identifier);
+  if (user) {
+    const token = createPasswordResetToken();
+    const tokenHash = hashPasswordResetToken(token);
+    const now = new Date();
+
+    await prisma.$transaction([
+      prisma.passwordResetToken.updateMany({
+        where: {
+          userId: user.id,
+          usedAt: null,
+          expiresAt: { gt: now },
+        },
+        data: { usedAt: now },
+      }),
+      prisma.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt: new Date(now.getTime() + 60 * 60 * 1000),
+        },
+      }),
+    ]);
+
+    await sendPasswordResetEmail({
+      to: user.email,
+      name: user.name,
+      token,
+      origin: await requestOrigin(),
+    });
+  }
+
+  redirect("/forgot-password?message=sent");
+}
+
+export async function resetPasswordAction(formData: FormData) {
+  const parsed = resetPasswordSchema.safeParse(Object.fromEntries(formData));
+  const token = formValue(formData, "token");
+  if (!parsed.success) redirect(token ? `/reset-password?token=${encodeURIComponent(token)}&message=invalid` : "/reset-password?message=invalid");
+
+  const tokenHash = hashPasswordResetToken(parsed.data.token);
+  const resetToken = await prisma.passwordResetToken.findUnique({
+    where: { tokenHash },
+    select: { id: true, userId: true, expiresAt: true, usedAt: true },
+  });
+
+  if (!resetToken || resetToken.usedAt || resetToken.expiresAt <= new Date()) {
+    redirect("/reset-password?message=expired");
+  }
+
+  const passwordHash = await hashPassword(parsed.data.newPassword);
+  const now = new Date();
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: resetToken.userId },
+      data: { passwordHash },
+    });
+    await tx.passwordResetToken.updateMany({
+      where: {
+        userId: resetToken.userId,
+        usedAt: null,
+      },
+      data: { usedAt: now },
+    });
+  });
+
+  redirect("/login?message=password-reset");
 }
 
 export async function checkoutAction(formData: FormData) {

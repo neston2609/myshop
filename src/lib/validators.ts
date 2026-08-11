@@ -35,6 +35,19 @@ export const changePasswordSchema = z.object({
   path: ["confirmPassword"],
 });
 
+export const forgotPasswordSchema = z.object({
+  identifier: z.string().trim().min(3).max(120),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().trim().min(20).max(200),
+  newPassword: z.string().min(8).max(128),
+  confirmPassword: z.string().min(8).max(128),
+}).refine((input) => input.newPassword === input.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
 export const checkoutSchema = z.object({
   customerName: z.string().min(2).max(120),
   customerEmail: emailSchema,
