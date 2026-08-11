@@ -36,6 +36,7 @@ export default async function AdminSettingsPage() {
           <div className="grid gap-3 md:grid-cols-2">
             <input name="shopName" defaultValue={site?.shopName || "MyShop"} placeholder="Shop name" required className="h-10 rounded-md border border-black/10 px-3" />
             <input name="supportEmail" defaultValue={site?.supportEmail || ""} placeholder="Support email" className="h-10 rounded-md border border-black/10 px-3" />
+            <input name="orderNotificationEmail" defaultValue={site?.orderNotificationEmail || ""} type="email" placeholder="Order/status notification email" className="h-10 rounded-md border border-black/10 px-3" />
             <LogoUploadField defaultValue={site?.logoUrl} />
             <input name="faviconUrl" defaultValue={site?.faviconUrl || ""} placeholder="Favicon URL or uploaded path" className="h-10 rounded-md border border-black/10 px-3" />
             <input name="brandColor" defaultValue={site?.brandColor || "#111827"} placeholder="#111827" className="h-10 rounded-md border border-black/10 px-3" />

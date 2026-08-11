@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BankLogo } from "@/components/bank-logo";
 import { SiteHeader } from "@/components/site-header";
 import { money } from "@/lib/format";
+import { sendOrderEmail } from "@/lib/order-email";
 import { confirmStripeCheckout, capturePayPalOrder } from "@/lib/payments";
 import { readPaymentCredentials } from "@/lib/payments";
 import { prisma } from "@/lib/prisma";
@@ -33,6 +34,7 @@ async function confirmPayment(params: { orderNumber?: string; stripeSessionId?: 
           paymentStatus: result.status,
         },
       });
+      if (result.paid) await sendOrderEmail("payment_paid", order.id);
       return result.paid
         ? { status: "paid", message: "Stripe payment confirmed." }
         : { status: "pending", message: `Stripe payment status: ${result.status}.` };
@@ -48,6 +50,7 @@ async function confirmPayment(params: { orderNumber?: string; stripeSessionId?: 
           paymentStatus: result.status,
         },
       });
+      if (result.paid) await sendOrderEmail("payment_paid", order.id);
       return result.paid
         ? { status: "paid", message: "PayPal payment captured." }
         : { status: "pending", message: `PayPal payment status: ${result.status}.` };

@@ -172,6 +172,7 @@ export const siteSettingsSchema = z.object({
   featureThreeBody: z.string().min(2).max(180),
   footerText: z.string().max(500).optional(),
   supportEmail: z.string().email().optional().or(z.literal("")),
+  orderNotificationEmail: z.string().email().optional().or(z.literal("")),
   remoteAreaFee: z.coerce.number().min(0).max(100000).default(50),
   remotePostalCodes: z.string().max(20000).optional(),
 });

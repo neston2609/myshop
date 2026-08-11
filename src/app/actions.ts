@@ -12,6 +12,7 @@ import { createSession, destroySession, findUserByEmail, findUserByIdentifier, g
 import { encryptSecret } from "@/lib/crypto";
 import { sanitizeProductHtml } from "@/lib/html";
 import { calculateCheckoutTotal, normalizePostalCodes } from "@/lib/checkout-pricing";
+import { sendOrderEmail } from "@/lib/order-email";
 import { buildPayPalCredentials, buildStripeCredentials, createPayPalOrder, createStripeCheckoutSession, readPaymentCredentials } from "@/lib/payments";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/format";
@@ -278,6 +279,8 @@ export async function checkoutAction(formData: FormData) {
   });
 
   await rememberShippingAddress(input, session?.id);
+  const origin = await requestOrigin();
+  await sendOrderEmail("order_created", order.id, { origin });
 
   if (paymentMethod.provider === "STRIPE") {
     const paymentUrl = await createStripeCheckoutSession({
@@ -296,7 +299,7 @@ export async function checkoutAction(formData: FormData) {
           total: item.lineTotal,
         })),
       },
-      origin: await requestOrigin(),
+      origin,
     });
     await clearCart();
     redirect(paymentUrl);
@@ -319,7 +322,7 @@ export async function checkoutAction(formData: FormData) {
           total: item.lineTotal,
         })),
       },
-      origin: await requestOrigin(),
+      origin,
     });
     await clearCart();
     redirect(paymentUrl);
@@ -392,6 +395,7 @@ export async function updateOrderTrackingAction(formData: FormData) {
       status: "SHIPPED",
     },
   });
+  await sendOrderEmail("order_shipped", input.orderId, { origin: await requestOrigin() });
   revalidatePath("/admin/orders");
   revalidatePath("/account");
   redirect("/admin/orders?message=tracking-saved");
@@ -438,6 +442,7 @@ export async function submitPaymentProofAction(formData: FormData) {
       paymentStatus: "proof_submitted",
     },
   });
+  await sendOrderEmail("payment_proof_submitted", order.id, { origin: await requestOrigin() });
 
   revalidatePath("/account");
   revalidatePath("/admin/orders");
@@ -456,6 +461,7 @@ export async function markOrderPaidAction(formData: FormData) {
       paymentStatus: "paid",
     },
   });
+  await sendOrderEmail("payment_paid", orderId, { origin: await requestOrigin() });
   revalidatePath("/admin/orders");
   revalidatePath("/account");
   redirect("/admin/orders?message=paid-marked");
@@ -714,6 +720,7 @@ export async function saveSiteSettingsAction(formData: FormData) {
     featureThreeBody: input.featureThreeBody,
     footerText: input.footerText || "",
     supportEmail: input.supportEmail || null,
+    orderNotificationEmail: input.orderNotificationEmail || null,
     remoteAreaFee: input.remoteAreaFee,
     remotePostalCodes: normalizePostalCodes(input.remotePostalCodes || ""),
   };
