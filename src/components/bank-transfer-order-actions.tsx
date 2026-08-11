@@ -6,6 +6,7 @@ import { QrCode, Upload } from "lucide-react";
 import { submitPaymentProofAction } from "@/app/actions";
 import { BankLogo } from "@/components/bank-logo";
 import { money } from "@/lib/format";
+import { thaiBanks } from "@/lib/banks";
 import type { BankTransferCredentials } from "@/lib/payments";
 
 export function BankTransferOrderActions({
@@ -53,7 +54,12 @@ export function BankTransferOrderActions({
         <form action={submitPaymentProofAction} className="grid w-full gap-3 rounded-md border border-black/10 bg-slate-50 p-3 md:grid-cols-2">
           <input type="hidden" name="orderId" value={orderId} />
           <input name="payerName" placeholder="ชื่อผู้โอน" required className="h-10 rounded-md border border-black/10 bg-white px-3" />
-          <input name="transferBank" placeholder="ธนาคารที่โอนจาก" required className="h-10 rounded-md border border-black/10 bg-white px-3" />
+          <select name="transferBank" required defaultValue="" className="h-10 rounded-md border border-black/10 bg-white px-3">
+            <option value="" disabled>เลือกธนาคารที่โอนจาก</option>
+            {thaiBanks.map((bank) => (
+              <option key={bank.code} value={bank.name}>{bank.name}</option>
+            ))}
+          </select>
           <input name="transferAmount" type="number" step="0.01" min="0" defaultValue={total.toFixed(2)} required className="h-10 rounded-md border border-black/10 bg-white px-3" />
           <input name="paidAt" type="datetime-local" required className="h-10 rounded-md border border-black/10 bg-white px-3" />
           <input name="slip" type="file" accept="image/png,image/jpeg,image/webp" required className="rounded-md border border-black/10 bg-white px-3 py-2 md:col-span-2" />
