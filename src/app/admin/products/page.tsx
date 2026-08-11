@@ -6,7 +6,18 @@ import { RichHtmlEditor } from "@/components/rich-html-editor";
 import { money } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
-export default async function AdminProductsPage() {
+type AdminProductsPageProps = {
+  searchParams: Promise<{ message?: string }>;
+};
+
+export default async function AdminProductsPage({ searchParams }: AdminProductsPageProps) {
+  const params = await searchParams;
+  const message = {
+    "product-deleted": "Product deleted.",
+    "product-archived": "Product has order history, so it was archived instead.",
+    "product-not-found": "Product was not found.",
+  }[params.message || ""];
+  const isError = params.message === "product-not-found";
   const [products, categories] = await Promise.all([
     prisma.product.findMany({ include: { category: true, media: { orderBy: { sortOrder: "asc" } } }, orderBy: { createdAt: "desc" } }),
     prisma.category.findMany({ orderBy: { name: "asc" } }),
@@ -16,6 +27,11 @@ export default async function AdminProductsPage() {
     <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
       <div className="rounded-lg border border-black/10 bg-white p-5">
         <h2 className="font-semibold">Products</h2>
+        {message ? (
+          <p className={`mt-3 rounded-md p-3 text-sm ${isError ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"}`}>
+            {message}
+          </p>
+        ) : null}
         <div className="mt-4 divide-y divide-black/10">
           {products.map((product) => {
             const imageUrls = product.media.filter((media) => media.type === "IMAGE").map((media) => media.url);

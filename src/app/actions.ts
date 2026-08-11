@@ -449,6 +449,7 @@ export async function markOrderPaidAction(formData: FormData) {
 }
 
 export async function saveProductAction(formData: FormData) {
+  await requireAdmin();
   const input = productSchema.parse({ ...Object.fromEntries(formData), active: formData.has("active") });
   const id = formValue(formData, "id");
   const slug = slugify(input.name);
@@ -479,26 +480,37 @@ export async function saveProductAction(formData: FormData) {
 }
 
 export async function deleteProductAction(formData: FormData) {
+  await requireAdmin();
   const id = formValue(formData, "id");
   if (!id) return;
 
-  const [orderItems, cartItems] = await Promise.all([
-    prisma.orderItem.count({ where: { productId: id } }),
-    prisma.cartItem.count({ where: { productId: id } }),
-  ]);
+  const product = await prisma.product.findUnique({ where: { id }, select: { id: true, slug: true } });
+  if (!product) redirect("/admin/products?message=product-not-found");
 
-  if (orderItems || cartItems) {
-    await prisma.product.update({
-      where: { id },
-      data: { active: false },
-    });
-  } else {
-    await prisma.product.delete({ where: { id } });
-  }
+  const orderItems = await prisma.orderItem.count({ where: { productId: id } });
+  const deleted = await prisma.$transaction(async (tx) => {
+    await tx.cartItem.deleteMany({ where: { productId: id } });
+
+    if (orderItems) {
+      await tx.product.update({
+        where: { id },
+        data: { active: false },
+      });
+      return false;
+    }
+
+    await tx.wishlistItem.deleteMany({ where: { productId: id } });
+    await tx.review.deleteMany({ where: { productId: id } });
+    await tx.productMedia.deleteMany({ where: { productId: id } });
+    await tx.product.delete({ where: { id } });
+    return true;
+  });
 
   revalidatePath("/admin/products");
   revalidatePath("/shop");
+  revalidatePath(`/products/${product.slug}`);
   revalidatePath("/");
+  redirect(`/admin/products?message=${deleted ? "product-deleted" : "product-archived"}`);
 }
 
 export async function saveCategoryAction(formData: FormData) {
