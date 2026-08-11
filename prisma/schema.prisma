@@ -188,6 +188,7 @@ model ShippingMethod {
   cost                  Decimal  @db.Decimal(10, 2)
   freeShippingThreshold Decimal? @db.Decimal(10, 2)
   enabled               Boolean  @default(true)
+  isTest                Boolean  @default(false)
   orders                Order[]
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
@@ -198,6 +199,7 @@ model PaymentMethod {
   name                  String
   provider              PaymentProvider
   enabled               Boolean         @default(true)
+  isTest                Boolean         @default(false)
   additionFeePercent    Decimal         @default(0) @db.Decimal(5, 2)
   credentialsCiphertext String?
   orders                Order[]

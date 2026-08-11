@@ -216,10 +216,11 @@ export async function checkoutAction(formData: FormData) {
   const cart = await getCart();
   if (cart.items.length === 0) redirect("/cart");
 
-  const [shippingMethod, paymentMethod, session, siteSettings] = await Promise.all([
-    prisma.shippingMethod.findFirst({ where: { id: input.shippingMethodId, enabled: true } }),
-    prisma.paymentMethod.findFirst({ where: { id: input.paymentMethodId, enabled: true } }),
-    getSession(),
+  const session = await getSession();
+  const methodAccess = session?.role === "ADMIN" ? {} : { isTest: false };
+  const [shippingMethod, paymentMethod, siteSettings] = await Promise.all([
+    prisma.shippingMethod.findFirst({ where: { id: input.shippingMethodId, enabled: true, ...methodAccess } }),
+    prisma.paymentMethod.findFirst({ where: { id: input.paymentMethodId, enabled: true, ...methodAccess } }),
     prisma.siteSettings.findFirst({ select: { remoteAreaFee: true, remotePostalCodes: true } }),
   ]);
 
@@ -350,6 +351,7 @@ export async function payOrderAction(formData: FormData) {
   });
 
   if (!order) redirect("/account?message=order-not-found");
+  if (order.status === "CANCELLED") redirect("/account?message=order-cancelled");
   if (orderIsPaid(order.status)) redirect("/account?message=already-paid");
   if (!order.paymentMethod) redirect("/account?message=payment-unavailable");
 
@@ -381,6 +383,44 @@ export async function payOrderAction(formData: FormData) {
   }
 
   redirect("/account?message=manual-payment");
+}
+
+export async function cancelOrderAction(formData: FormData) {
+  const session = await requireUser();
+  const orderId = formValue(formData, "orderId");
+  if (!orderId) redirect("/account?message=order-not-found");
+  const order = await prisma.order.findFirst({
+    where: {
+      id: orderId,
+      OR: [{ userId: session.id }, { customerEmail: session.email }],
+    },
+    include: { items: true },
+  });
+
+  if (!order) redirect("/account?message=order-not-found");
+  if (order.status === "CANCELLED") redirect("/account?message=order-cancelled");
+  if (orderIsPaid(order.status)) redirect("/account?message=cancel-not-allowed");
+
+  await prisma.$transaction(async (tx) => {
+    await tx.order.update({
+      where: { id: order.id },
+      data: { status: "CANCELLED", paymentStatus: "cancelled" },
+    });
+
+    for (const item of order.items) {
+      if (!item.productId) continue;
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: { increment: item.quantity } },
+      });
+    }
+  });
+
+  await sendOrderEmail("order_cancelled", order.id, { origin: await requestOrigin() });
+  revalidatePath("/account");
+  revalidatePath("/admin/orders");
+  revalidatePath("/shop");
+  redirect("/account?message=order-cancelled");
 }
 
 export async function updateOrderTrackingAction(formData: FormData) {
@@ -570,7 +610,8 @@ export async function deleteCategoryAction(formData: FormData) {
 }
 
 export async function saveShippingAction(formData: FormData) {
-  const input = shippingSchema.parse({ ...Object.fromEntries(formData), enabled: formData.has("enabled") });
+  await requireAdmin();
+  const input = shippingSchema.parse({ ...Object.fromEntries(formData), enabled: formData.has("enabled"), isTest: formData.has("isTest") });
   const id = formValue(formData, "id");
   const data = {
     name: input.name,
@@ -578,6 +619,7 @@ export async function saveShippingAction(formData: FormData) {
     cost: input.cost,
     freeShippingThreshold: input.freeShippingThreshold ?? null,
     enabled: input.enabled,
+    isTest: input.isTest,
   };
   if (id) await prisma.shippingMethod.update({ where: { id }, data });
   else await prisma.shippingMethod.create({ data });
@@ -586,6 +628,7 @@ export async function saveShippingAction(formData: FormData) {
 }
 
 export async function toggleShippingAction(formData: FormData) {
+  await requireAdmin();
   const id = formValue(formData, "id");
   if (!id) return;
   await prisma.shippingMethod.update({
@@ -597,6 +640,7 @@ export async function toggleShippingAction(formData: FormData) {
 }
 
 export async function deleteShippingAction(formData: FormData) {
+  await requireAdmin();
   const id = formValue(formData, "id");
   if (!id) return;
   await prisma.shippingMethod.delete({ where: { id } });
@@ -605,7 +649,8 @@ export async function deleteShippingAction(formData: FormData) {
 }
 
 export async function savePaymentAction(formData: FormData) {
-  const input = paymentSchema.parse({ ...Object.fromEntries(formData), enabled: formData.has("enabled") });
+  await requireAdmin();
+  const input = paymentSchema.parse({ ...Object.fromEntries(formData), enabled: formData.has("enabled"), isTest: formData.has("isTest") });
   const id = formValue(formData, "id");
   const current = id ? await prisma.paymentMethod.findUnique({ where: { id } }) : null;
   const existingCredentials = readPaymentCredentials(current?.credentialsCiphertext);
@@ -634,6 +679,7 @@ export async function savePaymentAction(formData: FormData) {
     name: input.name,
     provider: input.provider,
     enabled: input.enabled,
+    isTest: input.isTest,
     additionFeePercent: input.additionFeePercent,
     credentialsCiphertext: credentials ? encryptSecret(JSON.stringify(credentials)) : null,
   };
@@ -645,6 +691,7 @@ export async function savePaymentAction(formData: FormData) {
 }
 
 export async function togglePaymentAction(formData: FormData) {
+  await requireAdmin();
   const id = formValue(formData, "id");
   if (!id) return;
   await prisma.paymentMethod.update({
@@ -656,6 +703,7 @@ export async function togglePaymentAction(formData: FormData) {
 }
 
 export async function deletePaymentAction(formData: FormData) {
+  await requireAdmin();
   const id = formValue(formData, "id");
   if (!id) return;
   await prisma.paymentMethod.delete({ where: { id } });

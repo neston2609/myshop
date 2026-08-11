@@ -1,4 +1,4 @@
-import { changePasswordAction, logoutAction, payOrderAction } from "@/app/actions";
+import { cancelOrderAction, changePasswordAction, logoutAction, payOrderAction } from "@/app/actions";
 import { BankTransferOrderActions } from "@/components/bank-transfer-order-actions";
 import { SiteHeader } from "@/components/site-header";
 import { requireUser } from "@/lib/auth";
@@ -23,13 +23,15 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     "payment-unavailable": "This order cannot be paid online right now.",
     "manual-payment": "This order uses a manual payment method. Please follow the store payment instructions.",
     "already-paid": "This order is already paid.",
+    "cancel-not-allowed": "Paid orders cannot be cancelled from account history.",
+    "order-cancelled": "Order cancelled.",
     "order-not-found": "Order not found.",
     "proof-submitted": "Payment slip submitted. The store will verify it shortly.",
     "slip-required": "Please upload a payment slip.",
     "slip-type": "Slip must be PNG, JPG, or WebP.",
     "slip-too-large": "Slip file is too large.",
   }[params.message || ""];
-  const isError = params.message === "password-invalid" || params.message === "payment-unavailable" || params.message === "order-not-found" || params.message?.startsWith("slip-");
+  const isError = params.message === "password-invalid" || params.message === "payment-unavailable" || params.message === "order-not-found" || params.message === "cancel-not-allowed" || params.message?.startsWith("slip-");
   const orders = await prisma.order.findMany({
     where: { OR: [{ userId: session.id }, { customerEmail: session.email }] },
     include: { items: true, paymentMethod: true },
@@ -60,8 +62,9 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
           {orders.map((order) => {
             const destination = [order.shippingProvince || order.shippingCity, order.shippingPostalCode].filter(Boolean).join(" ");
             const isPaid = ["PAID", "PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status);
-            const canPayNow = !isPaid && (order.paymentMethod?.provider === "STRIPE" || order.paymentMethod?.provider === "PAYPAL");
-            const canShowBankTransfer = !isPaid && order.paymentMethod?.provider === "BANK_TRANSFER";
+            const canCancel = !isPaid && order.status !== "CANCELLED";
+            const canPayNow = !isPaid && order.status !== "CANCELLED" && (order.paymentMethod?.provider === "STRIPE" || order.paymentMethod?.provider === "PAYPAL");
+            const canShowBankTransfer = !isPaid && order.status !== "CANCELLED" && order.paymentMethod?.provider === "BANK_TRANSFER";
             const bankCredentials = canShowBankTransfer ? readPaymentCredentials(order.paymentMethod?.credentialsCiphertext) : null;
             const carrier = findShippingCarrier(order.trackingCarrierCode);
             const trackingUrl = trackingHref(order.trackingCarrierCode, order.trackingNumber);
@@ -82,6 +85,14 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
                         <input type="hidden" name="orderId" value={order.id} />
                         <button className="h-10 rounded-md bg-[#0f766e] px-4 font-semibold text-white transition hover:bg-[#115e59] active:translate-y-px">
                           ชำระเงิน
+                        </button>
+                      </form>
+                    ) : null}
+                    {canCancel ? (
+                      <form action={cancelOrderAction}>
+                        <input type="hidden" name="orderId" value={order.id} />
+                        <button className="h-10 rounded-md border border-red-200 bg-red-50 px-4 font-semibold text-red-700 transition hover:bg-red-100 active:translate-y-px">
+                          Cancel
                         </button>
                       </form>
                     ) : null}

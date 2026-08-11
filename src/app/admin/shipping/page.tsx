@@ -15,6 +15,7 @@ export default async function AdminShippingPage() {
               <summary className="grid cursor-pointer list-none items-center gap-3 rounded-md p-2 hover:bg-slate-50 md:grid-cols-[1fr_120px_170px_90px_140px]">
                 <span className="font-medium">
                   {method.name}
+                  {method.isTest ? <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">TEST</span> : null}
                   <span className="ml-2 text-slate-400">{method.regions.join(", ")}</span>
                 </span>
                 <span>{money(method.cost)}</span>
@@ -32,6 +33,7 @@ export default async function AdminShippingPage() {
                   cost={method.cost.toString()}
                   freeShippingThreshold={method.freeShippingThreshold?.toString() || ""}
                   enabled={method.enabled}
+                  isTest={method.isTest}
                   submitLabel="Save changes"
                 />
                 <div className="flex flex-wrap gap-2">
@@ -66,6 +68,7 @@ function ShippingForm({
   cost = "",
   freeShippingThreshold = "",
   enabled = true,
+  isTest = false,
   submitLabel,
 }: {
   id?: string;
@@ -74,6 +77,7 @@ function ShippingForm({
   cost?: string;
   freeShippingThreshold?: string;
   enabled?: boolean;
+  isTest?: boolean;
   submitLabel: string;
 }) {
   return (
@@ -85,6 +89,7 @@ function ShippingForm({
       <input name="cost" defaultValue={cost} type="number" step="0.01" placeholder="Cost" required className="h-10 rounded-md border border-black/10 px-3" />
       <input name="freeShippingThreshold" defaultValue={freeShippingThreshold} type="number" step="0.01" placeholder="Free shipping when order reaches" className="h-10 rounded-md border border-black/10 px-3" />
       <label className="flex items-center gap-2 text-sm"><input name="enabled" type="checkbox" defaultChecked={enabled} /> Enabled</label>
+      <label className="flex items-center gap-2 text-sm"><input name="isTest" type="checkbox" defaultChecked={isTest} /> Test only (admin can see/select)</label>
       <button className="h-10 rounded-md bg-[#17201c] font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#223329] active:translate-y-0">
         {submitLabel}
       </button>

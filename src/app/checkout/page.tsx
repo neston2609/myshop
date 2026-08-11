@@ -42,16 +42,19 @@ function parseSavedShippingAddress(value?: string): SavedShippingAddress {
 }
 
 export default async function CheckoutPage() {
-  const [cart, shippingMethods, paymentMethods, session, cookieStore] = await Promise.all([
+  const [cart, session, cookieStore] = await Promise.all([
     getCart(),
-    prisma.shippingMethod.findMany({ where: { enabled: true } }),
-    prisma.paymentMethod.findMany({ where: { enabled: true } }),
     getSession(),
     cookies(),
   ]);
-  const siteSettings = await prisma.siteSettings.findFirst({
-    select: { remoteAreaFee: true, remotePostalCodes: true },
-  });
+  const methodAccess = session?.role === "ADMIN" ? {} : { isTest: false };
+  const [shippingMethods, paymentMethods, siteSettings] = await Promise.all([
+    prisma.shippingMethod.findMany({ where: { enabled: true, ...methodAccess }, orderBy: { createdAt: "asc" } }),
+    prisma.paymentMethod.findMany({ where: { enabled: true, ...methodAccess }, orderBy: { createdAt: "asc" } }),
+    prisma.siteSettings.findFirst({
+      select: { remoteAreaFee: true, remotePostalCodes: true },
+    }),
+  ]);
   const user = session
     ? await prisma.user.findUnique({
         where: { id: session.id },
@@ -97,12 +100,14 @@ export default async function CheckoutPage() {
           name: method.name,
           cost: Number(method.cost),
           freeShippingThreshold: method.freeShippingThreshold ? Number(method.freeShippingThreshold) : null,
+          isTest: method.isTest,
         }))}
         paymentMethods={paymentMethods.map((method) => ({
           id: method.id,
           name: method.name,
           provider: method.provider,
           additionFeePercent: Number(method.additionFeePercent),
+          isTest: method.isTest,
           credentials: method.provider === "BANK_TRANSFER" ? bankTransferCredentials(method.credentialsCiphertext) : null,
         }))}
         settings={{

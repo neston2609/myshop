@@ -14,6 +14,7 @@ type PaymentMethodFormProps = {
     name: string;
     provider: string;
     enabled: boolean;
+    isTest: boolean;
     additionFeePercent: number;
     credentials: PaymentCredentials;
   };
@@ -197,6 +198,7 @@ export function PaymentMethodForm({ method }: PaymentMethodFormProps) {
       ) : null}
 
       <label className="flex items-center gap-2 text-sm"><input name="enabled" type="checkbox" defaultChecked={method?.enabled ?? true} /> Enabled</label>
+      <label className="flex items-center gap-2 text-sm"><input name="isTest" type="checkbox" defaultChecked={method?.isTest ?? false} /> Test only (admin can see/select)</label>
       <button className="h-10 rounded-md bg-[#17201c] font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#223329] active:translate-y-0">
         {method ? "Save changes" : "Save method"}
       </button>

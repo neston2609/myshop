@@ -26,6 +26,7 @@ type ShippingOption = {
   name: string;
   cost: number;
   freeShippingThreshold: number | null;
+  isTest: boolean;
 };
 
 type PaymentOption = {
@@ -33,6 +34,7 @@ type PaymentOption = {
   name: string;
   provider: string;
   additionFeePercent: number;
+  isTest: boolean;
   credentials: BankTransferCredentials | null;
 };
 
@@ -114,8 +116,8 @@ export function CheckoutForm({
                 const threshold = method.freeShippingThreshold;
                 const qualifies = threshold !== null && subtotal >= threshold;
                 const label = threshold
-                  ? `${method.name} - ${qualifies ? "ส่งฟรี" : money(method.cost)} (ส่งฟรีเมื่อซื้อครบ ${money(threshold)})`
-                  : `${method.name} - ${money(method.cost)}`;
+                  ? `${method.isTest ? "[TEST] " : ""}${method.name} - ${qualifies ? "ส่งฟรี" : money(method.cost)} (ส่งฟรีเมื่อซื้อครบ ${money(threshold)})`
+                  : `${method.isTest ? "[TEST] " : ""}${method.name} - ${money(method.cost)}`;
                 return <option key={method.id} value={method.id}>{label}</option>;
               })}
             </select>
@@ -140,7 +142,7 @@ export function CheckoutForm({
             >
               {paymentMethods.map((method) => (
                 <option key={method.id} value={method.id}>
-                  {method.name}{method.additionFeePercent > 0 ? ` (+${method.additionFeePercent}%)` : ""}
+                  {method.isTest ? "[TEST] " : ""}{method.name}{method.additionFeePercent > 0 ? ` (+${method.additionFeePercent}%)` : ""}
                 </option>
               ))}
             </select>

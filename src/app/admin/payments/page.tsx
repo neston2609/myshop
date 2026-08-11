@@ -19,7 +19,10 @@ export default async function AdminPaymentsPage() {
               <details key={method.id} className="group py-3 text-sm">
                 <summary className="grid cursor-pointer list-none items-center gap-3 rounded-md p-2 hover:bg-slate-50 md:grid-cols-[1fr_150px_90px_180px]">
                   <div>
-                    <span className="font-medium">{method.name}</span>
+                    <span className="font-medium">
+                      {method.name}
+                      {method.isTest ? <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">TEST</span> : null}
+                    </span>
                     <ProviderSummary provider={method.provider} credentials={credentials} />
                   </div>
                   <span>{method.provider}{Number(method.additionFeePercent) > 0 ? ` +${Number(method.additionFeePercent)}%` : ""}</span>
@@ -33,6 +36,7 @@ export default async function AdminPaymentsPage() {
                       name: method.name,
                       provider: method.provider,
                       enabled: method.enabled,
+                      isTest: method.isTest,
                       additionFeePercent: Number(method.additionFeePercent),
                       credentials,
                     }}

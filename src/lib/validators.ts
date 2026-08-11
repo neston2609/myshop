@@ -75,6 +75,7 @@ export const shippingSchema = z.object({
   cost: z.coerce.number().min(0),
   freeShippingThreshold: z.preprocess((value) => value === "" ? undefined : value, z.coerce.number().min(0).optional()),
   enabled: z.coerce.boolean().default(true),
+  isTest: z.coerce.boolean().default(false),
 });
 
 export const orderTrackingSchema = z.object({
@@ -96,6 +97,7 @@ export const paymentSchema = z.object({
   name: z.string().min(2).max(100),
   provider: z.enum(["CASH_ON_DELIVERY", "BANK_TRANSFER", "STRIPE", "PAYPAL", "CUSTOM"]),
   enabled: z.coerce.boolean().default(true),
+  isTest: z.coerce.boolean().default(false),
   additionFeePercent: z.coerce.number().min(0).max(100).default(0),
   credentials: z.string().optional(),
   bankCode: z.string().max(40).optional(),

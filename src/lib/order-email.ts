@@ -5,7 +5,7 @@ import { readPaymentCredentials } from "@/lib/payments";
 import { prisma } from "@/lib/prisma";
 import { trackingHref } from "@/lib/shipping-carriers";
 
-export type OrderEmailEvent = "order_created" | "payment_proof_submitted" | "payment_paid" | "order_shipped";
+export type OrderEmailEvent = "order_created" | "payment_proof_submitted" | "payment_paid" | "order_shipped" | "order_cancelled";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || "https://www.japantoyshop.com";
 
@@ -56,6 +56,13 @@ function eventCopy(event: OrderEmailEvent) {
       title: "จัดส่งสินค้าแล้ว",
       intro: "สินค้าของคุณถูกจัดส่งแล้ว สามารถตรวจสอบเลขพัสดุได้จากรายละเอียดด้านล่าง",
       adminIntro: "คำสั่งซื้อนี้ถูกอัปเดตเป็นจัดส่งแล้ว",
+    },
+    order_cancelled: {
+      customerSubject: "Order cancelled",
+      adminSubject: "Order cancelled",
+      title: "ยกเลิกคำสั่งซื้อแล้ว",
+      intro: "คำสั่งซื้อของคุณถูกยกเลิกแล้ว",
+      adminIntro: "ลูกค้ายกเลิกคำสั่งซื้อที่ยังไม่ชำระเงิน",
     },
   }[event];
 }
