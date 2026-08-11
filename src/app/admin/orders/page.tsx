@@ -1,15 +1,27 @@
 import Image from "next/image";
+import Link from "next/link";
 import { markOrderPaidAction, updateOrderTrackingAction } from "@/app/actions";
 import { money } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { shippingCarriers } from "@/lib/shipping-carriers";
 
 type AdminOrdersPageProps = {
-  searchParams: Promise<{ message?: string }>;
+  searchParams: Promise<{ message?: string; page?: string }>;
 };
+
+const ordersPerPage = 6;
+
+function pageLink(page: number, message?: string) {
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  if (message) params.set("message", message);
+  return `/admin/orders?${params.toString()}`;
+}
 
 export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageProps) {
   const params = await searchParams;
+  const requestedPage = Number(params.page || "1");
+  const currentPage = Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 1;
   const message = {
     "tracking-saved": "Tracking updated.",
     "tracking-not-allowed": "Tracking can be added only after payment is successful.",
@@ -17,9 +29,14 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
     "paid-marked": "Order marked as paid.",
   }[params.message || ""];
   const isError = params.message === "tracking-not-allowed" || params.message === "carrier-invalid";
+  const orderCount = await prisma.order.count();
+  const totalPages = Math.max(1, Math.ceil(orderCount / ordersPerPage));
+  const safePage = Math.min(currentPage, totalPages);
   const orders = await prisma.order.findMany({
     include: { items: true, shippingMethod: true, paymentMethod: true },
     orderBy: { createdAt: "desc" },
+    skip: (safePage - 1) * ordersPerPage,
+    take: ordersPerPage,
   });
 
   return (
@@ -109,6 +126,23 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
           );
         })}
       </div>
+      {orderCount > ordersPerPage ? (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-black/10 bg-slate-50 p-3 text-sm">
+          <span className="text-slate-500">Page {safePage} of {totalPages}</span>
+          <div className="flex gap-2">
+            {safePage > 1 ? (
+              <Link href={pageLink(safePage - 1, params.message)} className="inline-flex h-10 items-center rounded-md border border-black/10 bg-white px-4 font-semibold transition hover:bg-slate-100 active:translate-y-px">
+                Previous
+              </Link>
+            ) : null}
+            {safePage < totalPages ? (
+              <Link href={pageLink(safePage + 1, params.message)} className="inline-flex h-10 items-center rounded-md bg-[#17201c] px-4 font-semibold text-white transition hover:bg-[#0f766e] active:translate-y-px">
+                Next
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

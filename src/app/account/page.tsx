@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cancelOrderAction, changePasswordAction, logoutAction, payOrderAction } from "@/app/actions";
 import { BankTransferOrderActions } from "@/components/bank-transfer-order-actions";
 import { SiteHeader } from "@/components/site-header";
@@ -10,12 +11,24 @@ import { findShippingCarrier, trackingHref } from "@/lib/shipping-carriers";
 export const dynamic = "force-dynamic";
 
 type AccountPageProps = {
-  searchParams: Promise<{ message?: string }>;
+  searchParams: Promise<{ message?: string; page?: string }>;
 };
+
+const ordersPerPage = 6;
+
+function pageLink(page: number, message?: string) {
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  if (message) params.set("message", message);
+  return `/account?${params.toString()}`;
+}
 
 export default async function AccountPage({ searchParams }: AccountPageProps) {
   const session = await requireUser();
   const params = await searchParams;
+  const requestedPage = Number(params.page || "1");
+  const currentPage = Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 1;
+  const orderWhere = { OR: [{ userId: session.id }, { customerEmail: session.email }] };
   const message = {
     "password-changed": "Password changed successfully.",
     "password-invalid": "Current password is incorrect.",
@@ -32,10 +45,15 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     "slip-too-large": "Slip file is too large.",
   }[params.message || ""];
   const isError = params.message === "password-invalid" || params.message === "payment-unavailable" || params.message === "order-not-found" || params.message === "cancel-not-allowed" || params.message?.startsWith("slip-");
+  const orderCount = await prisma.order.count({ where: orderWhere });
+  const totalPages = Math.max(1, Math.ceil(orderCount / ordersPerPage));
+  const safePage = Math.min(currentPage, totalPages);
   const orders = await prisma.order.findMany({
-    where: { OR: [{ userId: session.id }, { customerEmail: session.email }] },
+    where: orderWhere,
     include: { items: true, paymentMethod: true },
     orderBy: { createdAt: "desc" },
+    skip: (safePage - 1) * ordersPerPage,
+    take: ordersPerPage,
   });
 
   return (
@@ -130,6 +148,23 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
             );
           })}
           {orders.length === 0 ? <p className="rounded-lg border border-black/10 bg-white p-6 text-slate-600">No orders yet.</p> : null}
+          {orderCount > ordersPerPage ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-black/10 bg-white p-3 text-sm">
+              <span className="text-slate-500">Page {safePage} of {totalPages}</span>
+              <div className="flex gap-2">
+                {safePage > 1 ? (
+                  <Link href={pageLink(safePage - 1, params.message)} className="inline-flex h-10 items-center rounded-md border border-black/10 px-4 font-semibold transition hover:bg-slate-50 active:translate-y-px">
+                    Previous
+                  </Link>
+                ) : null}
+                {safePage < totalPages ? (
+                  <Link href={pageLink(safePage + 1, params.message)} className="inline-flex h-10 items-center rounded-md bg-[#17201c] px-4 font-semibold text-white transition hover:bg-[#0f766e] active:translate-y-px">
+                    Next
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
           </div>
           <form action={changePasswordAction} className="grid h-fit gap-3 rounded-lg border border-black/10 bg-white p-5">
             <div>
