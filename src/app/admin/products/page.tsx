@@ -15,7 +15,6 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
   const params = await searchParams;
   const message = {
     "product-deleted": "Product deleted.",
-    "product-archived": "Product has order history, so it was archived instead.",
     "product-not-found": "Product was not found.",
   }[params.message || ""];
   const isError = params.message === "product-not-found";
