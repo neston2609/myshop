@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { deleteProductAction, saveProductAction } from "@/app/actions";
 import { AiDescriptionButton } from "@/components/ai-description-button";
 import { MultiImageUploadField } from "@/components/multi-image-upload-field";
@@ -7,7 +8,7 @@ import { money } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
 type AdminProductsPageProps = {
-  searchParams: Promise<{ message?: string }>;
+  searchParams: Promise<{ message?: string; category?: string }>;
 };
 
 export default async function AdminProductsPage({ searchParams }: AdminProductsPageProps) {
@@ -18,8 +19,13 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
     "product-not-found": "Product was not found.",
   }[params.message || ""];
   const isError = params.message === "product-not-found";
+  const selectedCategory = params.category || "";
   const [products, categories] = await Promise.all([
-    prisma.product.findMany({ include: { category: true, media: { orderBy: { sortOrder: "asc" } } }, orderBy: { createdAt: "desc" } }),
+    prisma.product.findMany({
+      where: selectedCategory ? { category: { slug: selectedCategory } } : undefined,
+      include: { category: true, media: { orderBy: { sortOrder: "asc" } } },
+      orderBy: { createdAt: "desc" },
+    }),
     prisma.category.findMany({ orderBy: { name: "asc" } }),
   ]);
 
@@ -32,6 +38,28 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
             {message}
           </p>
         ) : null}
+        <form action="/admin/products" className="mt-4 grid gap-3 rounded-lg border border-black/10 bg-slate-50 p-3 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+          <label className="grid gap-1 text-sm font-medium text-slate-700">
+            Filter by category
+            <select name="category" defaultValue={selectedCategory} className="h-10 rounded-md border border-black/10 bg-white px-3 font-normal text-slate-900">
+              <option value="">All categories</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.slug}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="h-10 rounded-md bg-[#17201c] px-4 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#223329] active:translate-y-0">
+            Apply
+          </button>
+          {selectedCategory ? (
+            <Link href="/admin/products" className="inline-flex h-10 items-center justify-center rounded-md border border-black/10 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-50 active:translate-y-0">
+              Clear
+            </Link>
+          ) : null}
+        </form>
+        <p className="mt-3 text-sm text-slate-500">Showing {products.length} product{products.length === 1 ? "" : "s"}.</p>
         <div className="mt-4 divide-y divide-black/10">
           {products.map((product) => {
             const imageUrls = product.media.filter((media) => media.type === "IMAGE").map((media) => media.url);

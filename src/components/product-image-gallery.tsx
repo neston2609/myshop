@@ -36,7 +36,7 @@ export function ProductImageGallery({ images, fallbackAlt }: { images: GalleryIm
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="relative aspect-[4/3] overflow-hidden rounded-lg bg-slate-100 transition hover:-translate-y-0.5 active:translate-y-0"
+        className="relative aspect-square overflow-hidden rounded-lg bg-slate-100 transition hover:-translate-y-0.5 active:translate-y-0"
         aria-label="Open product image gallery"
       >
         <Image src={activeImage.url} alt={activeImage.alt} fill className="object-cover" sizes="(min-width: 1024px) 55vw, 100vw" priority />

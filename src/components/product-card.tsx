@@ -25,7 +25,7 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <article className="group overflow-hidden rounded-lg border border-black/10 bg-white">
       <Link href={`/products/${product.slug}`} className="block">
-        <div className="relative aspect-[4/3] bg-slate-100">
+        <div className="relative aspect-square bg-slate-100">
           <Image
             src={image}
             alt={product.media[0]?.alt || product.name}
