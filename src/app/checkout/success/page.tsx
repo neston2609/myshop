@@ -1,6 +1,10 @@
+import Image from "next/image";
 import Link from "next/link";
+import { BankLogo } from "@/components/bank-logo";
 import { SiteHeader } from "@/components/site-header";
+import { money } from "@/lib/format";
 import { confirmStripeCheckout, capturePayPalOrder } from "@/lib/payments";
+import { readPaymentCredentials } from "@/lib/payments";
 import { prisma } from "@/lib/prisma";
 
 type SuccessPageProps = {
@@ -65,6 +69,15 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
     stripeSessionId: params.stripe_session_id,
     paypalToken: params.token,
   });
+  const order = params.order
+    ? await prisma.order.findUnique({
+        where: { orderNumber: params.order },
+        include: { paymentMethod: true },
+      })
+    : null;
+  const credentials = order?.paymentMethod?.provider === "BANK_TRANSFER"
+    ? readPaymentCredentials(order.paymentMethod.credentialsCiphertext)
+    : null;
 
   return (
     <>
@@ -76,6 +89,28 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
           <p className={payment.status === "error" ? "mt-3 text-sm text-red-600" : "mt-3 text-sm text-slate-600"}>
             {payment.message}
           </p>
+          {order?.paymentMethod?.provider === "BANK_TRANSFER" && credentials ? (
+            <div className="mt-6 grid gap-4 rounded-md border border-black/10 bg-slate-50 p-4 text-left">
+              <div className="flex items-center gap-3">
+                <BankLogo code={credentials.bankCode} name={credentials.bankName} />
+                <div>
+                  <p className="font-semibold">โอนเงินผ่านธนาคาร</p>
+                  <p className="text-sm text-slate-600">{credentials.bankName}</p>
+                </div>
+              </div>
+              {credentials.qrCodeUrl ? (
+                <Image src={credentials.qrCodeUrl} alt="Bank transfer QR code" width={220} height={220} className="mx-auto rounded-md border border-black/10 bg-white object-contain" />
+              ) : null}
+              <div className="grid gap-1 text-sm text-slate-700">
+                <p>ชื่อบัญชี: <strong>{credentials.accountName}</strong></p>
+                <p>เลขบัญชี: <strong>{credentials.accountNumber}</strong></p>
+                <p>ยอดชำระ: <strong>{money(order.total)}</strong></p>
+              </div>
+              <Link href="/account" className="inline-flex h-10 items-center justify-center rounded-md bg-[#0f766e] px-4 text-sm font-semibold text-white">
+                แจ้งชำระเงิน
+              </Link>
+            </div>
+          ) : null}
           <Link href="/account" className="mt-6 inline-flex h-11 items-center rounded-md bg-[#17201c] px-5 font-semibold text-white">View account</Link>
         </div>
       </main>

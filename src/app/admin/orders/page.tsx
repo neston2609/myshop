@@ -1,4 +1,5 @@
-import { updateOrderTrackingAction } from "@/app/actions";
+import Image from "next/image";
+import { markOrderPaidAction, updateOrderTrackingAction } from "@/app/actions";
 import { money } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { shippingCarriers } from "@/lib/shipping-carriers";
@@ -13,6 +14,7 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
     "tracking-saved": "Tracking updated.",
     "tracking-not-allowed": "Tracking can be added only after payment is successful.",
     "carrier-invalid": "Selected carrier is invalid.",
+    "paid-marked": "Order marked as paid.",
   }[params.message || ""];
   const isError = params.message === "tracking-not-allowed" || params.message === "carrier-invalid";
   const orders = await prisma.order.findMany({
@@ -49,6 +51,35 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
                 <strong>{money(order.total)}</strong>
               </div>
               <p className="mt-2 text-sm text-slate-500">{order.items.length} items to {shippingLine}</p>
+              <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-500">
+                <span>สินค้า {money(order.subtotal)}</span>
+                <span>ค่าส่ง {money(order.shippingCost)}</span>
+                {Number(order.remoteAreaFee) > 0 ? <span>พื้นที่พิเศษ {money(order.remoteAreaFee)}</span> : null}
+                {Number(order.paymentFee) > 0 ? <span>ค่าธรรมเนียม {money(order.paymentFee)}</span> : null}
+              </div>
+              {order.paymentSlipUrl ? (
+                <div className="mt-4 grid gap-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm md:grid-cols-[180px_1fr_auto] md:items-start">
+                  <a href={order.paymentSlipUrl} target="_blank" rel="noreferrer" className="block">
+                    <Image src={order.paymentSlipUrl} alt={`Payment slip ${order.orderNumber}`} width={180} height={180} className="max-h-44 w-full rounded-md border border-black/10 bg-white object-contain" />
+                  </a>
+                  <div className="grid gap-1 text-amber-950">
+                    <p className="font-semibold">แจ้งชำระเงินแล้ว</p>
+                    <p>ชื่อผู้โอน: {order.paymentSlipName || "-"}</p>
+                    <p>ธนาคารที่โอนจาก: {order.paymentSlipBank || "-"}</p>
+                    <p>ยอดที่แจ้ง: {order.paymentSlipAmount ? money(order.paymentSlipAmount) : "-"}</p>
+                    <p>เวลาโอน: {order.paymentSlipPaidAt ? order.paymentSlipPaidAt.toLocaleString() : "-"}</p>
+                    {order.paymentSlipNote ? <p>หมายเหตุ: {order.paymentSlipNote}</p> : null}
+                  </div>
+                  {!["PAID", "PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status) ? (
+                    <form action={markOrderPaidAction}>
+                      <input type="hidden" name="orderId" value={order.id} />
+                      <button className="h-10 rounded-md bg-[#0f766e] px-4 font-semibold text-white transition hover:bg-[#115e59] active:translate-y-px">
+                        Mark PAID
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
+              ) : null}
               {canUpdateTracking ? (
                 <form action={updateOrderTrackingAction} className="mt-4 grid gap-3 rounded-md border border-black/10 bg-slate-50 p-3 md:grid-cols-[220px_1fr_auto] md:items-end">
                   <input type="hidden" name="orderId" value={order.id} />

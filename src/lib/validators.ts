@@ -83,13 +83,26 @@ export const orderTrackingSchema = z.object({
   trackingNumber: z.string().trim().min(3).max(100),
 });
 
+export const paymentProofSchema = z.object({
+  orderId: z.string().min(1),
+  payerName: z.string().trim().min(2).max(120),
+  transferBank: z.string().trim().min(2).max(100),
+  transferAmount: z.coerce.number().positive(),
+  paidAt: z.string().trim().min(1),
+  note: z.string().trim().max(500).optional(),
+});
+
 export const paymentSchema = z.object({
   name: z.string().min(2).max(100),
   provider: z.enum(["CASH_ON_DELIVERY", "BANK_TRANSFER", "STRIPE", "PAYPAL", "CUSTOM"]),
   enabled: z.coerce.boolean().default(true),
+  additionFeePercent: z.coerce.number().min(0).max(100).default(0),
   credentials: z.string().optional(),
+  bankCode: z.string().max(40).optional(),
   bankName: z.string().max(100).optional(),
   accountName: z.string().max(140).optional(),
+  accountNumber: z.string().max(80).optional(),
+  bankLogoUrl: z.string().optional(),
   qrCodeUrl: z.string().optional(),
   stripeSecretKey: z.string().optional(),
   stripePublishableKey: z.string().optional(),
@@ -110,6 +123,13 @@ export const paymentSchema = z.object({
       code: "custom",
       message: "Account name is required",
       path: ["accountName"],
+    });
+  }
+  if (input.provider === "BANK_TRANSFER" && !input.accountNumber?.trim()) {
+    context.addIssue({
+      code: "custom",
+      message: "Account number is required",
+      path: ["accountNumber"],
     });
   }
 });
@@ -152,4 +172,34 @@ export const siteSettingsSchema = z.object({
   featureThreeBody: z.string().min(2).max(180),
   footerText: z.string().max(500).optional(),
   supportEmail: z.string().email().optional().or(z.literal("")),
+  remoteAreaFee: z.coerce.number().min(0).max(100000).default(50),
+  remotePostalCodes: z.string().max(20000).optional(),
+});
+
+export const downloadSourceSchema = z.object({
+  name: z.string().trim().min(2).max(100),
+  protocol: z.enum(["sftp", "ftp", "ftps"]).default("sftp"),
+  enabled: z.coerce.boolean().default(true),
+  host: z.string().trim().min(1).max(200),
+  port: z.coerce.number().int().positive().max(65535).optional(),
+  username: z.string().trim().min(1).max(200),
+  password: z.string().max(2000).optional(),
+  basePath: z.string().trim().min(1).max(500).default("/"),
+});
+
+export const downloadCategorySchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  slug: z.string().trim().max(140).optional(),
+  description: z.string().trim().max(500).optional(),
+  imageUrl: uploadedImageSchema.optional(),
+  sourceId: z.string().min(1),
+  remotePath: z.string().trim().min(1).max(800),
+  position: z.coerce.number().int().default(0),
+  enabled: z.coerce.boolean().default(true),
+});
+
+export const downloadHideRuleSchema = z.object({
+  pattern: z.string().trim().min(1).max(160),
+  enabled: z.coerce.boolean().default(true),
+  position: z.coerce.number().int().default(0),
 });

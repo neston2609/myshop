@@ -62,6 +62,7 @@ model User {
   carts        Cart[]
   reviews      Review[]
   wishlist     WishlistItem[]
+  downloadLogs DownloadLog[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
@@ -134,6 +135,8 @@ model Order {
   shippingCountry     String
   subtotal            Decimal         @db.Decimal(10, 2)
   shippingCost        Decimal         @db.Decimal(10, 2)
+  remoteAreaFee       Decimal         @default(0) @db.Decimal(10, 2)
+  paymentFee          Decimal         @default(0) @db.Decimal(10, 2)
   discountTotal       Decimal         @default(0) @db.Decimal(10, 2)
   total               Decimal         @db.Decimal(10, 2)
   status              OrderStatus     @default(PENDING)
@@ -146,6 +149,13 @@ model Order {
   trackingCarrierCode String?
   trackingCarrierName String?
   trackingNumber      String?
+  paymentSlipUrl      String?
+  paymentSlipName     String?
+  paymentSlipBank     String?
+  paymentSlipAmount   Decimal?        @db.Decimal(10, 2)
+  paymentSlipPaidAt   DateTime?
+  paymentSlipNote     String?
+  paymentNotifiedAt   DateTime?
   items               OrderItem[]
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
@@ -188,6 +198,7 @@ model PaymentMethod {
   name                  String
   provider              PaymentProvider
   enabled               Boolean         @default(true)
+  additionFeePercent    Decimal         @default(0) @db.Decimal(5, 2)
   credentialsCiphertext String?
   orders                Order[]
   createdAt             DateTime        @default(now())
@@ -240,6 +251,8 @@ model SiteSettings {
   featureThreeBody  String   @default("Choose providers and models for descriptions, SEO text, and assistant features.")
   footerText        String   @default("")
   supportEmail      String?
+  remoteAreaFee     Decimal  @default(50) @db.Decimal(10, 2)
+  remotePostalCodes String[] @default([])
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
@@ -308,4 +321,60 @@ model WishlistItem {
   createdAt DateTime @default(now())
 
   @@unique([userId, productId])
+}
+
+model DownloadSource {
+  id                 String             @id @default(cuid())
+  name               String             @unique
+  protocol           String             @default("sftp")
+  enabled            Boolean            @default(true)
+  host               String?
+  port               Int?
+  username           String?
+  passwordCiphertext String?
+  basePath           String             @default("/")
+  categories         DownloadCategory[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+model DownloadCategory {
+  id          String          @id @default(cuid())
+  name        String
+  slug        String          @unique
+  description String?
+  imageUrl    String?
+  sourceId    String?
+  source      DownloadSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  remotePath  String
+  enabled     Boolean         @default(true)
+  position    Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([sourceId])
+  @@index([enabled])
+}
+
+model DownloadHideRule {
+  id        String   @id @default(cuid())
+  pattern   String
+  enabled   Boolean  @default(true)
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DownloadLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  path      String
+  fileName  String
+  sizeBytes Int?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
 }

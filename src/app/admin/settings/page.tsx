@@ -57,6 +57,27 @@ export default async function AdminSettingsPage() {
             </label>
           </div>
           <div className="grid gap-3 border-t border-black/10 pt-4">
+            <h3 className="text-sm font-semibold">Shipping remote area</h3>
+            <div className="grid gap-3 md:grid-cols-[220px_1fr]">
+              <input
+                name="remoteAreaFee"
+                defaultValue={site?.remoteAreaFee?.toString() || "50"}
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Remote area fee"
+                className="h-10 rounded-md border border-black/10 px-3"
+              />
+              <textarea
+                name="remotePostalCodes"
+                defaultValue={(site?.remotePostalCodes || []).join("\n")}
+                placeholder={"58130\n84280\ncomma, space, or newline separated"}
+                rows={4}
+                className="rounded-md border border-black/10 px-3 py-2"
+              />
+            </div>
+          </div>
+          <div className="grid gap-3 border-t border-black/10 pt-4">
             <div>
               <h3 className="text-sm font-semibold">Header navigation</h3>
               <p className="mt-1 text-xs text-slate-500">Add one link per line, using: Label | URL</p>

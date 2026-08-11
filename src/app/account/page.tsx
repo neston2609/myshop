@@ -1,7 +1,9 @@
 import { changePasswordAction, logoutAction, payOrderAction } from "@/app/actions";
+import { BankTransferOrderActions } from "@/components/bank-transfer-order-actions";
 import { SiteHeader } from "@/components/site-header";
 import { requireUser } from "@/lib/auth";
 import { money } from "@/lib/format";
+import { readPaymentCredentials } from "@/lib/payments";
 import { prisma } from "@/lib/prisma";
 import { findShippingCarrier, trackingHref } from "@/lib/shipping-carriers";
 
@@ -22,8 +24,12 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     "manual-payment": "This order uses a manual payment method. Please follow the store payment instructions.",
     "already-paid": "This order is already paid.",
     "order-not-found": "Order not found.",
+    "proof-submitted": "Payment slip submitted. The store will verify it shortly.",
+    "slip-required": "Please upload a payment slip.",
+    "slip-type": "Slip must be PNG, JPG, or WebP.",
+    "slip-too-large": "Slip file is too large.",
   }[params.message || ""];
-  const isError = params.message === "password-invalid" || params.message === "payment-unavailable" || params.message === "order-not-found";
+  const isError = params.message === "password-invalid" || params.message === "payment-unavailable" || params.message === "order-not-found" || params.message?.startsWith("slip-");
   const orders = await prisma.order.findMany({
     where: { OR: [{ userId: session.id }, { customerEmail: session.email }] },
     include: { items: true, paymentMethod: true },
@@ -55,6 +61,8 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
             const destination = [order.shippingProvince || order.shippingCity, order.shippingPostalCode].filter(Boolean).join(" ");
             const isPaid = ["PAID", "PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status);
             const canPayNow = !isPaid && (order.paymentMethod?.provider === "STRIPE" || order.paymentMethod?.provider === "PAYPAL");
+            const canShowBankTransfer = !isPaid && order.paymentMethod?.provider === "BANK_TRANSFER";
+            const bankCredentials = canShowBankTransfer ? readPaymentCredentials(order.paymentMethod?.credentialsCiphertext) : null;
             const carrier = findShippingCarrier(order.trackingCarrierCode);
             const trackingUrl = trackingHref(order.trackingCarrierCode, order.trackingNumber);
             return (
@@ -80,6 +88,20 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
                   </div>
                 </div>
                 <p className="mt-3 text-sm text-slate-600">{order.items.length} items shipped to {destination || order.shippingCountry}</p>
+                <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
+                  <span>สินค้า {money(order.subtotal)}</span>
+                  <span>ค่าส่ง {money(order.shippingCost)}</span>
+                  {Number(order.paymentFee) > 0 ? <span>ค่าธรรมเนียม {money(order.paymentFee)}</span> : null}
+                </div>
+                {canShowBankTransfer && bankCredentials ? (
+                  <BankTransferOrderActions
+                    orderId={order.id}
+                    orderNumber={order.orderNumber}
+                    total={Number(order.total)}
+                    credentials={bankCredentials}
+                    proofSubmitted={Boolean(order.paymentSlipUrl)}
+                  />
+                ) : null}
                 {order.trackingNumber ? (
                   <div className="mt-3 rounded-md border border-black/10 bg-slate-50 p-3 text-sm">
                     <p className="font-semibold text-slate-800">ข้อมูลจัดส่ง</p>

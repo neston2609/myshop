@@ -49,7 +49,7 @@ function Label({ text, children, className = "" }: { text: string; children: Rea
 const inputClass = "h-11 rounded-md border border-black/10 bg-white px-3 text-base outline-none transition focus:border-[#0f766e] focus:ring-2 focus:ring-[#0f766e]/15";
 const textareaClass = "min-h-28 rounded-md border border-black/10 bg-white px-3 py-3 text-base outline-none transition focus:border-[#0f766e] focus:ring-2 focus:ring-[#0f766e]/15";
 
-export function ThaiAddressFields({ savedAddress }: { savedAddress: SavedAddress }) {
+export function ThaiAddressFields({ savedAddress, onPostalCodeChange }: { savedAddress: SavedAddress; onPostalCodeChange?: (postalCode: string) => void }) {
   const [province, setProvince] = useState(savedAddress.shippingProvince);
   const [district, setDistrict] = useState(savedAddress.shippingDistrict);
   const [subdistrict, setSubdistrict] = useState(savedAddress.shippingSubdistrict);
@@ -85,12 +85,16 @@ export function ThaiAddressFields({ savedAddress }: { savedAddress: SavedAddress
       (row) => row.province === nextProvince && row.district === nextDistrict && row.subdistrict === nextSubdistrict,
     );
     const zipcodes = uniqueSorted(matches.map((row) => row.postalCode));
-    if (zipcodes.length === 1) setPostalCode(zipcodes[0]);
+    if (zipcodes.length === 1) {
+      setPostalCode(zipcodes[0]);
+      onPostalCodeChange?.(zipcodes[0]);
+    }
   }
 
   function handlePostalChange(value: string) {
     const nextPostalCode = value.replace(/\D/g, "").slice(0, 5);
     setPostalCode(nextPostalCode);
+    onPostalCodeChange?.(nextPostalCode);
     if (nextPostalCode.length !== 5) return;
 
     const matches = addressRows.filter((row) => row.postalCode === nextPostalCode);
@@ -114,6 +118,7 @@ export function ThaiAddressFields({ savedAddress }: { savedAddress: SavedAddress
     setSubdistrict("");
     if (postalCode && !addressRows.some((row) => row.postalCode === postalCode && row.province === nextProvince)) {
       setPostalCode("");
+      onPostalCodeChange?.("");
     }
   }
 
@@ -122,7 +127,9 @@ export function ThaiAddressFields({ savedAddress }: { savedAddress: SavedAddress
     setSubdistrict("");
     const matches = addressRows.filter((row) => row.province === province && row.district === nextDistrict);
     const zipcodes = uniqueSorted(matches.map((row) => row.postalCode));
-    setPostalCode(zipcodes.length === 1 ? zipcodes[0] : "");
+    const nextPostalCode = zipcodes.length === 1 ? zipcodes[0] : "";
+    setPostalCode(nextPostalCode);
+    onPostalCodeChange?.(nextPostalCode);
   }
 
   function handleSubdistrictChange(nextSubdistrict: string) {

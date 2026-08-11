@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { deletePaymentAction, togglePaymentAction } from "@/app/actions";
+import { BankLogo } from "@/components/bank-logo";
 import { PaymentMethodForm } from "@/components/payment-method-form";
 import type { PaymentCredentials } from "@/lib/payments";
 import { readPaymentCredentials } from "@/lib/payments";
@@ -21,7 +22,7 @@ export default async function AdminPaymentsPage() {
                     <span className="font-medium">{method.name}</span>
                     <ProviderSummary provider={method.provider} credentials={credentials} />
                   </div>
-                  <span>{method.provider}</span>
+                  <span>{method.provider}{Number(method.additionFeePercent) > 0 ? ` +${Number(method.additionFeePercent)}%` : ""}</span>
                   <span>{method.enabled ? "Enabled" : "Disabled"}</span>
                   <span className="text-xs text-slate-500">Click to edit</span>
                 </summary>
@@ -32,6 +33,7 @@ export default async function AdminPaymentsPage() {
                       name: method.name,
                       provider: method.provider,
                       enabled: method.enabled,
+                      additionFeePercent: Number(method.additionFeePercent),
                       credentials,
                     }}
                   />
@@ -86,10 +88,11 @@ function ProviderSummary({ provider, credentials }: { provider: string; credenti
 function BankTransferSummary({ credentials }: { credentials: PaymentCredentials }) {
   return (
     <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
+      <BankLogo code={credentials.bankCode} name={credentials.bankName} />
       {credentials.qrCodeUrl ? (
         <Image src={credentials.qrCodeUrl} alt="Bank transfer QR" width={44} height={44} className="rounded-md border border-black/10 object-contain" />
       ) : null}
-      <span>{credentials.bankName || "Bank not set"} - {credentials.accountName || "Account not set"}</span>
+      <span>{credentials.bankName || "Bank not set"} - {credentials.accountName || "Account not set"} {credentials.accountNumber ? `(${credentials.accountNumber})` : ""}</span>
     </div>
   );
 }

@@ -47,6 +47,7 @@ export async function SiteHeader() {
           <Link href="/shop">Shop</Link>
           <Link href="/shop?sort=new">New arrivals</Link>
           <Link href="/shop?stock=in">In stock</Link>
+          <Link href="/downloads">Downloads</Link>
           {customLinks.map((link) => (
             <Link key={`${link.label}-${link.href}`} href={link.href}>
               {link.label}

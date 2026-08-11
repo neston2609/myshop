@@ -1,9 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { QrCode, Upload } from "lucide-react";
 import { savePaymentAction } from "@/app/actions";
+import { BankLogo } from "@/components/bank-logo";
+import { findBank, thaiBanks } from "@/lib/banks";
 import type { PaymentCredentials } from "@/lib/payments";
 
 type PaymentMethodFormProps = {
@@ -12,6 +14,7 @@ type PaymentMethodFormProps = {
     name: string;
     provider: string;
     enabled: boolean;
+    additionFeePercent: number;
     credentials: PaymentCredentials;
   };
 };
@@ -27,6 +30,8 @@ const providers = [
 export function PaymentMethodForm({ method }: PaymentMethodFormProps) {
   const [provider, setProvider] = useState(method?.provider || "CASH_ON_DELIVERY");
   const [qrCodeUrl, setQrCodeUrl] = useState(method?.credentials.qrCodeUrl || "");
+  const initialBank = findBank(method?.credentials.bankCode) || findBank(method?.credentials.bankName) || thaiBanks[0];
+  const [bankCode, setBankCode] = useState(initialBank.code);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -34,6 +39,7 @@ export function PaymentMethodForm({ method }: PaymentMethodFormProps) {
   const isStripe = provider === "STRIPE";
   const isPayPal = provider === "PAYPAL";
   const isCustom = provider === "CUSTOM";
+  const selectedBank = useMemo(() => thaiBanks.find((bank) => bank.code === bankCode) || thaiBanks[0], [bankCode]);
 
   function upload(file: File) {
     setError("");
@@ -60,6 +66,16 @@ export function PaymentMethodForm({ method }: PaymentMethodFormProps) {
       <h2 className="font-semibold">{method ? "Edit payment method" : "Add payment method"}</h2>
       {method ? <input type="hidden" name="id" value={method.id} /> : null}
       <input name="name" defaultValue={method?.name || ""} placeholder="Name" required className="h-10 rounded-md border border-black/10 px-3" />
+      <input
+        name="additionFeePercent"
+        defaultValue={method?.additionFeePercent ?? 0}
+        type="number"
+        step="0.01"
+        min="0"
+        max="100"
+        placeholder="Addition fee percent, e.g. 4"
+        className="h-10 rounded-md border border-black/10 px-3"
+      />
       <select
         name="provider"
         value={provider}
@@ -73,8 +89,21 @@ export function PaymentMethodForm({ method }: PaymentMethodFormProps) {
 
       {isBankTransfer ? (
         <div className="grid gap-3 rounded-md border border-black/10 bg-slate-50 p-3">
-          <input name="bankName" defaultValue={method?.credentials.bankName || ""} placeholder="Bank name" required className="h-10 rounded-md border border-black/10 bg-white px-3" />
+          <input type="hidden" name="bankName" value={selectedBank.name} />
+          <input type="hidden" name="bankLogoUrl" value={method?.credentials.bankLogoUrl || ""} />
+          <label className="grid gap-1.5 text-sm font-semibold text-slate-800">
+            <span>Bank</span>
+            <span className="flex items-center gap-3">
+              <BankLogo code={bankCode} />
+              <select name="bankCode" value={bankCode} onChange={(event) => setBankCode(event.target.value)} required className="h-10 flex-1 rounded-md border border-black/10 bg-white px-3">
+                {thaiBanks.map((bank) => (
+                  <option key={bank.code} value={bank.code}>{bank.name}</option>
+                ))}
+              </select>
+            </span>
+          </label>
           <input name="accountName" defaultValue={method?.credentials.accountName || ""} placeholder="Account name" required className="h-10 rounded-md border border-black/10 bg-white px-3" />
+          <input name="accountNumber" defaultValue={method?.credentials.accountNumber || ""} placeholder="Account number" required className="h-10 rounded-md border border-black/10 bg-white px-3" />
           <input type="hidden" name="qrCodeUrl" value={qrCodeUrl} />
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex h-28 w-28 items-center justify-center rounded-md border border-black/10 bg-white">

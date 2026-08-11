@@ -4,8 +4,11 @@ import { decryptSecret } from "@/lib/crypto";
 import { prisma } from "@/lib/prisma";
 
 export type BankTransferCredentials = {
+  bankCode?: string;
   bankName?: string;
   accountName?: string;
+  accountNumber?: string;
+  bankLogoUrl?: string;
   qrCodeUrl?: string;
 };
 
@@ -33,6 +36,7 @@ export type CheckoutOrder = {
   customerEmail: string;
   total: number;
   shippingCost: number;
+  paymentFee?: number;
   items: Array<{
     name: string;
     price: number;
@@ -118,6 +122,18 @@ export async function createStripeCheckoutSession(params: {
           },
         },
       },
+      ...(params.order.paymentFee && params.order.paymentFee > 0
+        ? [{
+            quantity: 1,
+            price_data: {
+              currency: "thb",
+              unit_amount: toMinorUnits(params.order.paymentFee),
+              product_data: {
+                name: "Payment fee",
+              },
+            },
+          }]
+        : []),
     ],
   });
 
@@ -160,6 +176,7 @@ export async function createPayPalOrder(params: {
   const accessToken = await getPayPalAccessToken(credentials);
   const site = await prisma.siteSettings.findFirst({ select: { shopName: true } });
   const itemTotal = params.order.items.reduce((total, item) => total + item.price * item.quantity, 0);
+  const paymentFee = params.order.paymentFee || 0;
   const amount = params.order.total.toFixed(2);
 
   const response = await fetch(`${paypalBaseUrl(credentials.environment)}/v2/checkout/orders`, {
@@ -180,6 +197,7 @@ export async function createPayPalOrder(params: {
             breakdown: {
               item_total: { currency_code: "THB", value: itemTotal.toFixed(2) },
               shipping: { currency_code: "THB", value: params.order.shippingCost.toFixed(2) },
+              handling: { currency_code: "THB", value: paymentFee.toFixed(2) },
             },
           },
           items: params.order.items.map((item) => ({

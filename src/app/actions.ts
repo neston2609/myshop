@@ -1,14 +1,17 @@
 "use server";
 
 import type { Prisma } from "@prisma/client";
+import { mkdir, writeFile } from "fs/promises";
 import { nanoid } from "nanoid";
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import path from "path";
 import { addCartItem, clearCart, getCart, updateCartItem } from "@/lib/cart";
 import { createSession, destroySession, findUserByEmail, findUserByIdentifier, getSession, hashPassword, requireAdmin, requireUser, verifyPassword } from "@/lib/auth";
 import { encryptSecret } from "@/lib/crypto";
 import { sanitizeProductHtml } from "@/lib/html";
+import { calculateCheckoutTotal, normalizePostalCodes } from "@/lib/checkout-pricing";
 import { buildPayPalCredentials, buildStripeCredentials, createPayPalOrder, createStripeCheckoutSession, readPaymentCredentials } from "@/lib/payments";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/format";
@@ -18,8 +21,12 @@ import {
   changePasswordSchema,
   categorySchema,
   checkoutSchema,
+  downloadCategorySchema,
+  downloadHideRuleSchema,
+  downloadSourceSchema,
   loginSchema,
   orderTrackingSchema,
+  paymentProofSchema,
   paymentSchema,
   productSchema,
   registerSchema,
@@ -189,17 +196,28 @@ export async function checkoutAction(formData: FormData) {
   const cart = await getCart();
   if (cart.items.length === 0) redirect("/cart");
 
-  const [shippingMethod, paymentMethod, session] = await Promise.all([
+  const [shippingMethod, paymentMethod, session, siteSettings] = await Promise.all([
     prisma.shippingMethod.findFirst({ where: { id: input.shippingMethodId, enabled: true } }),
     prisma.paymentMethod.findFirst({ where: { id: input.paymentMethodId, enabled: true } }),
     getSession(),
+    prisma.siteSettings.findFirst({ select: { remoteAreaFee: true, remotePostalCodes: true } }),
   ]);
 
   if (!shippingMethod || !paymentMethod) redirect("/checkout?message=configuration");
 
-  const baseShippingCost = Number(shippingMethod.cost);
-  const freeShippingThreshold = shippingMethod.freeShippingThreshold ? Number(shippingMethod.freeShippingThreshold) : null;
-  const shippingCost = freeShippingThreshold && cart.subtotal >= freeShippingThreshold ? 0 : baseShippingCost;
+  const pricing = calculateCheckoutTotal({
+    subtotal: cart.subtotal,
+    shippingMethod: {
+      cost: Number(shippingMethod.cost),
+      freeShippingThreshold: shippingMethod.freeShippingThreshold ? Number(shippingMethod.freeShippingThreshold) : null,
+    },
+    paymentMethod: { additionFeePercent: Number(paymentMethod.additionFeePercent) },
+    postalCode: input.shippingPostalCode,
+    settings: {
+      remoteAreaFee: siteSettings ? Number(siteSettings.remoteAreaFee) : 50,
+      remotePostalCodes: siteSettings?.remotePostalCodes || [],
+    },
+  });
   const order = await prisma.$transaction(async (tx) => {
     const created = await tx.order.create({
       data: {
@@ -216,9 +234,11 @@ export async function checkoutAction(formData: FormData) {
         shippingCity: input.shippingProvince,
         shippingCountry: "Thailand",
         subtotal: cart.subtotal,
-        shippingCost,
-        total: cart.subtotal + shippingCost,
-        paymentStatus: paymentMethod.provider === "STRIPE" || paymentMethod.provider === "PAYPAL" ? "pending" : "manual",
+        shippingCost: pricing.shippingCost,
+        remoteAreaFee: pricing.remoteAreaFee,
+        paymentFee: pricing.paymentFee,
+        total: pricing.total,
+        paymentStatus: paymentMethod.provider === "STRIPE" || paymentMethod.provider === "PAYPAL" ? "pending" : paymentMethod.provider === "BANK_TRANSFER" ? "awaiting_transfer" : "manual",
         shippingMethodId: shippingMethod.id,
         paymentMethodId: paymentMethod.id,
         items: {
@@ -253,8 +273,9 @@ export async function checkoutAction(formData: FormData) {
         id: order.id,
         orderNumber: order.orderNumber,
         customerEmail: order.customerEmail,
-        total: cart.subtotal + shippingCost,
-        shippingCost,
+        total: pricing.total,
+        shippingCost: pricing.shippingCost,
+        paymentFee: pricing.paymentFee,
         items: cart.items.map((item) => ({
           name: item.product.name,
           price: Number(item.product.price),
@@ -275,8 +296,9 @@ export async function checkoutAction(formData: FormData) {
         id: order.id,
         orderNumber: order.orderNumber,
         customerEmail: order.customerEmail,
-        total: cart.subtotal + shippingCost,
-        shippingCost,
+        total: pricing.total,
+        shippingCost: pricing.shippingCost,
+        paymentFee: pricing.paymentFee,
         items: cart.items.map((item) => ({
           name: item.product.name,
           price: Number(item.product.price),
@@ -291,7 +313,7 @@ export async function checkoutAction(formData: FormData) {
   }
 
   await clearCart();
-  redirect(`/checkout/success?order=${order.orderNumber}`);
+  redirect(`/checkout/success?order=${order.orderNumber}${paymentMethod.provider === "BANK_TRANSFER" ? "&payment=bank-transfer" : ""}`);
 }
 
 export async function payOrderAction(formData: FormData) {
@@ -315,6 +337,7 @@ export async function payOrderAction(formData: FormData) {
     customerEmail: order.customerEmail,
     total: Number(order.total),
     shippingCost: Number(order.shippingCost),
+    paymentFee: Number(order.paymentFee),
     items: order.items.map((item) => ({
       name: item.name,
       price: Number(item.price),
@@ -329,6 +352,10 @@ export async function payOrderAction(formData: FormData) {
 
   if (order.paymentMethod.provider === "PAYPAL") {
     redirect(await createPayPalOrder({ method: order.paymentMethod, order: paymentOrder, origin: await requestOrigin() }));
+  }
+
+  if (order.paymentMethod.provider === "BANK_TRANSFER") {
+    redirect(`/checkout/success?order=${order.orderNumber}&payment=bank-transfer`);
   }
 
   redirect("/account?message=manual-payment");
@@ -349,11 +376,76 @@ export async function updateOrderTrackingAction(formData: FormData) {
       trackingCarrierCode: carrier.code,
       trackingCarrierName: carrier.name,
       trackingNumber: input.trackingNumber,
+      status: "SHIPPED",
     },
   });
   revalidatePath("/admin/orders");
   revalidatePath("/account");
   redirect("/admin/orders?message=tracking-saved");
+}
+
+export async function submitPaymentProofAction(formData: FormData) {
+  const session = await requireUser();
+  const input = paymentProofSchema.parse(Object.fromEntries(formData));
+  const file = formData.get("slip");
+  if (!(file instanceof File) || file.size === 0) redirect("/account?message=slip-required");
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) redirect("/account?message=slip-type");
+  if (file.size > 10 * 1024 * 1024) redirect("/account?message=slip-too-large");
+
+  const order = await prisma.order.findFirst({
+    where: {
+      id: input.orderId,
+      OR: [{ userId: session.id }, { customerEmail: session.email }],
+    },
+    include: { paymentMethod: true },
+  });
+
+  if (!order) redirect("/account?message=order-not-found");
+  if (order.paymentMethod?.provider !== "BANK_TRANSFER") redirect("/account?message=payment-unavailable");
+  if (orderIsPaid(order.status)) redirect("/account?message=already-paid");
+
+  const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), "public", "uploads");
+  await mkdir(uploadDir, { recursive: true });
+  const filename = `slip-${order.orderNumber}-${nanoid(10)}.${extension}`;
+  const target = path.join(/* turbopackIgnore: true */ uploadDir, filename);
+  await writeFile(target, Buffer.from(await file.arrayBuffer()));
+
+  const paidAt = new Date(input.paidAt);
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      paymentSlipUrl: `/uploads/${filename}`,
+      paymentSlipName: input.payerName,
+      paymentSlipBank: input.transferBank,
+      paymentSlipAmount: input.transferAmount,
+      paymentSlipPaidAt: Number.isNaN(paidAt.getTime()) ? new Date() : paidAt,
+      paymentSlipNote: input.note || null,
+      paymentNotifiedAt: new Date(),
+      paymentStatus: "proof_submitted",
+    },
+  });
+
+  revalidatePath("/account");
+  revalidatePath("/admin/orders");
+  redirect("/account?message=proof-submitted");
+}
+
+export async function markOrderPaidAction(formData: FormData) {
+  await requireAdmin();
+  const orderId = formValue(formData, "orderId");
+  if (!orderId) return;
+
+  await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      status: "PAID",
+      paymentStatus: "paid",
+    },
+  });
+  revalidatePath("/admin/orders");
+  revalidatePath("/account");
+  redirect("/admin/orders?message=paid-marked");
 }
 
 export async function saveProductAction(formData: FormData) {
@@ -489,8 +581,11 @@ export async function savePaymentAction(formData: FormData) {
 
   if (input.provider === "BANK_TRANSFER") {
     credentials = {
+      bankCode: input.bankCode?.trim() || "",
       bankName: input.bankName?.trim() || "",
       accountName: input.accountName?.trim() || "",
+      accountNumber: input.accountNumber?.trim() || "",
+      bankLogoUrl: input.bankLogoUrl || existingCredentials.bankLogoUrl || "",
       qrCodeUrl: input.qrCodeUrl || existingCredentials.qrCodeUrl || "",
     };
   } else if (input.provider === "STRIPE") {
@@ -507,6 +602,7 @@ export async function savePaymentAction(formData: FormData) {
     name: input.name,
     provider: input.provider,
     enabled: input.enabled,
+    additionFeePercent: input.additionFeePercent,
     credentialsCiphertext: credentials ? encryptSecret(JSON.stringify(credentials)) : null,
   };
 
@@ -598,10 +694,96 @@ export async function saveSiteSettingsAction(formData: FormData) {
     featureThreeBody: input.featureThreeBody,
     footerText: input.footerText || "",
     supportEmail: input.supportEmail || null,
+    remoteAreaFee: input.remoteAreaFee,
+    remotePostalCodes: normalizePostalCodes(input.remotePostalCodes || ""),
   };
   if (current) await prisma.siteSettings.update({ where: { id: current.id }, data });
   else await prisma.siteSettings.create({ data });
   revalidatePath("/", "layout");
   revalidatePath("/");
   revalidatePath("/admin/settings");
+}
+
+export async function saveDownloadSourceAction(formData: FormData) {
+  await requireAdmin();
+  const input = downloadSourceSchema.parse({ ...Object.fromEntries(formData), enabled: formData.has("enabled") });
+  const id = formValue(formData, "id");
+  const current = id ? await prisma.downloadSource.findUnique({ where: { id } }) : null;
+  const data = {
+    name: input.name,
+    protocol: input.protocol,
+    enabled: input.enabled,
+    host: input.host,
+    port: input.port || (input.protocol === "sftp" ? 22 : 21),
+    username: input.username,
+    basePath: input.basePath || "/",
+    passwordCiphertext: input.password?.trim() ? encryptSecret(input.password.trim()) : current?.passwordCiphertext || null,
+  };
+  if (current) await prisma.downloadSource.update({ where: { id: current.id }, data });
+  else await prisma.downloadSource.create({ data });
+  revalidatePath("/admin/downloads");
+  revalidatePath("/downloads");
+}
+
+export async function deleteDownloadSourceAction(formData: FormData) {
+  await requireAdmin();
+  const id = formValue(formData, "id");
+  if (!id) return;
+  await prisma.downloadSource.delete({ where: { id } });
+  revalidatePath("/admin/downloads");
+  revalidatePath("/downloads");
+}
+
+export async function saveDownloadCategoryAction(formData: FormData) {
+  await requireAdmin();
+  const input = downloadCategorySchema.parse({ ...Object.fromEntries(formData), enabled: formData.has("enabled") });
+  const id = formValue(formData, "id");
+  const fallbackSlug = `download-${nanoid(6).toLowerCase()}`;
+  const data = {
+    name: input.name,
+    slug: slugify(input.slug || input.name) || fallbackSlug,
+    description: input.description || null,
+    imageUrl: input.imageUrl || null,
+    sourceId: input.sourceId,
+    remotePath: input.remotePath,
+    position: input.position,
+    enabled: input.enabled,
+  };
+  if (id) await prisma.downloadCategory.update({ where: { id }, data });
+  else await prisma.downloadCategory.create({ data });
+  revalidatePath("/admin/downloads");
+  revalidatePath("/downloads");
+}
+
+export async function deleteDownloadCategoryAction(formData: FormData) {
+  await requireAdmin();
+  const id = formValue(formData, "id");
+  if (!id) return;
+  await prisma.downloadCategory.delete({ where: { id } });
+  revalidatePath("/admin/downloads");
+  revalidatePath("/downloads");
+}
+
+export async function saveDownloadHideRuleAction(formData: FormData) {
+  await requireAdmin();
+  const input = downloadHideRuleSchema.parse({ ...Object.fromEntries(formData), enabled: formData.has("enabled") });
+  const id = formValue(formData, "id");
+  const data = {
+    pattern: input.pattern,
+    enabled: input.enabled,
+    position: input.position,
+  };
+  if (id) await prisma.downloadHideRule.update({ where: { id }, data });
+  else await prisma.downloadHideRule.create({ data });
+  revalidatePath("/admin/downloads");
+  revalidatePath("/downloads");
+}
+
+export async function deleteDownloadHideRuleAction(formData: FormData) {
+  await requireAdmin();
+  const id = formValue(formData, "id");
+  if (!id) return;
+  await prisma.downloadHideRule.delete({ where: { id } });
+  revalidatePath("/admin/downloads");
+  revalidatePath("/downloads");
 }

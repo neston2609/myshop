@@ -1,0 +1,230 @@
+import path from "path";
+import { PassThrough, type Writable } from "stream";
+import { Client, FileType } from "basic-ftp";
+import type { DownloadCategory, DownloadSource } from "@prisma/client";
+import SftpClient from "ssh2-sftp-client";
+import { decryptSecret } from "@/lib/crypto";
+import { prisma } from "@/lib/prisma";
+
+export type DownloadEntry = {
+  name: string;
+  type: "dir" | "file";
+  size?: number | null;
+  modifiedAt?: Date | number | null;
+  path: string;
+  thumb?: string;
+};
+
+type Ops = {
+  list(remotePath: string): Promise<Array<Omit<DownloadEntry, "path">>>;
+  stat(remotePath: string): Promise<{ size?: number | null; isDirectory: boolean }>;
+  streamTo(remotePath: string, writable: Writable): Promise<unknown>;
+};
+
+type CategoryWithSource = DownloadCategory & { source: DownloadSource | null };
+
+function sourcePassword(source: DownloadSource) {
+  return source.passwordCiphertext ? decryptSecret(source.passwordCiphertext) : undefined;
+}
+
+async function withSftp<T>(source: DownloadSource, fn: (ops: Ops) => Promise<T>) {
+  const sftp = new SftpClient();
+  await sftp.connect({
+    host: source.host,
+    port: source.port || 22,
+    username: source.username,
+    password: sourcePassword(source),
+    readyTimeout: 30000,
+  });
+
+  try {
+    return await fn({
+      async list(remotePath) {
+        const entries = await sftp.list(remotePath);
+        return entries.map((entry) => ({
+          name: entry.name,
+          type: entry.type === "d" ? "dir" as const : "file" as const,
+          size: entry.size,
+          modifiedAt: entry.modifyTime || null,
+        }));
+      },
+      async stat(remotePath) {
+        const stat = await sftp.stat(remotePath);
+        return { size: stat.size, isDirectory: stat.isDirectory };
+      },
+      async streamTo(remotePath, writable) {
+        return sftp.get(remotePath, writable);
+      },
+    });
+  } finally {
+    await sftp.end().catch(() => undefined);
+  }
+}
+
+async function cdAbs(client: Client, target: string) {
+  await client.cd("/");
+  const segments = String(target || "").split("/").filter(Boolean);
+  for (const segment of segments) {
+    await client.cd(segment);
+  }
+}
+
+async function withFtp<T>(source: DownloadSource, secure: boolean, fn: (ops: Ops) => Promise<T>) {
+  const client = new Client(30000);
+  client.ftp.verbose = false;
+  await client.access({
+    host: source.host || "",
+    port: source.port || 21,
+    user: source.username || "",
+    password: sourcePassword(source),
+    secure,
+    secureOptions: secure ? { rejectUnauthorized: false } : undefined,
+  });
+
+  try {
+    return await fn({
+      async list(remotePath) {
+        await cdAbs(client, remotePath);
+        const entries = await client.list();
+        return entries.map((entry) => ({
+          name: entry.name,
+          type: entry.type === FileType.Directory ? "dir" as const : "file" as const,
+          size: entry.size,
+          modifiedAt: entry.modifiedAt || null,
+        }));
+      },
+      async stat(remotePath) {
+        try {
+          const size = await client.size(remotePath);
+          return { size, isDirectory: false };
+        } catch {
+          await client.cd(remotePath);
+          return { size: 0, isDirectory: true };
+        }
+      },
+      async streamTo(remotePath, writable) {
+        return client.downloadTo(writable, remotePath);
+      },
+    });
+  } finally {
+    client.close();
+  }
+}
+
+async function withClient<T>(source: DownloadSource, fn: (ops: Ops) => Promise<T>) {
+  if (!source.enabled) throw new Error("This download source is disabled.");
+  if (source.protocol === "sftp") return withSftp(source, fn);
+  if (source.protocol === "ftp") return withFtp(source, false, fn);
+  if (source.protocol === "ftps") return withFtp(source, true, fn);
+  throw new Error(`Unsupported download protocol: ${source.protocol}`);
+}
+
+export function safeResolve(rootPath: string, subPath: string) {
+  const root = (rootPath || "/").replace(/\/+$/, "") || "/";
+  const cleaned = path.posix.normalize(`/${String(subPath || "")}`).replace(/^\/+/, "");
+  if (cleaned.split("/").some((segment) => segment === "..")) throw new Error("Invalid path.");
+  const full = path.posix.join(root, cleaned);
+  if (!(full === root || full.startsWith(`${root}/`))) throw new Error("Invalid path.");
+  return full;
+}
+
+function patternToRegex(pattern: string) {
+  const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^${escaped.replace(/\*/g, ".*").replace(/\?/g, ".")}$`, "i");
+}
+
+async function hideRegexes() {
+  const rules = await prisma.downloadHideRule.findMany({ where: { enabled: true }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] });
+  return rules.map((rule) => patternToRegex(rule.pattern));
+}
+
+function isHidden(name: string, rules: RegExp[]) {
+  return name.startsWith(".") || rules.some((rule) => rule.test(name));
+}
+
+export async function listDownloadEntries(category: CategoryWithSource, subPath: string) {
+  if (!category.source) throw new Error("This download category is not mapped to a source.");
+  const rules = await hideRegexes();
+  return withClient(category.source, async (ops) => {
+    const dir = safeResolve(category.remotePath, subPath);
+    const entries = await ops.list(dir);
+    const cleanSub = String(subPath || "").replace(/^\/+|\/+$/g, "");
+    const out: DownloadEntry[] = [];
+
+    for (const entry of entries.filter((item) => !isHidden(item.name, rules))) {
+      const shaped: DownloadEntry = {
+        ...entry,
+        path: cleanSub ? `${cleanSub}/${entry.name}` : entry.name,
+      };
+      if (entry.type === "dir") {
+        try {
+          const thumb = path.posix.join(dir, entry.name, "folder.jpg");
+          const stat = await ops.stat(thumb);
+          if (!stat.isDirectory) shaped.thumb = `${shaped.path}/folder.jpg`;
+        } catch {
+          // Folders without folder.jpg simply use the default icon.
+        }
+      }
+      out.push(shaped);
+    }
+
+    return out.sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === "dir" ? -1 : 1));
+  });
+}
+
+export async function openDownloadStream(category: CategoryWithSource, subPath: string) {
+  if (!category.source) throw new Error("This download category is not mapped to a source.");
+  const rules = await hideRegexes();
+  const full = safeResolve(category.remotePath, subPath);
+  const segments = String(subPath || "").split("/").filter(Boolean);
+  if (segments.some((segment) => isHidden(segment, rules))) throw new Error("File not found.");
+
+  const stream = new PassThrough();
+  const filename = path.posix.basename(full);
+  const started = withClient(category.source, async (ops) => {
+    const stat = await ops.stat(full);
+    if (stat.isDirectory) throw new Error("Not a file.");
+    await ops.streamTo(full, stream);
+    stream.end();
+    return { filename, size: stat.size ?? null };
+  }).catch((error) => {
+    stream.destroy(error);
+    throw error;
+  });
+
+  return { filename, stream, started };
+}
+
+export async function openInlineImageStream(category: CategoryWithSource, subPath: string) {
+  if (!/\.(jpe?g|png|webp|gif)$/i.test(subPath || "")) throw new Error("Not an image.");
+  if (!category.source) throw new Error("This download category is not mapped to a source.");
+  const full = safeResolve(category.remotePath, subPath);
+  const stream = new PassThrough();
+  const started = withClient(category.source, async (ops) => {
+    await ops.streamTo(full, stream);
+    stream.end();
+  }).catch((error) => {
+    stream.destroy(error);
+    throw error;
+  });
+  return { stream, started };
+}
+
+export function imageContentType(filename: string) {
+  if (/\.png$/i.test(filename)) return "image/png";
+  if (/\.webp$/i.test(filename)) return "image/webp";
+  if (/\.gif$/i.test(filename)) return "image/gif";
+  return "image/jpeg";
+}
+
+export function formatBytes(size?: number | null) {
+  if (size == null) return "";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = Number(size);
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value.toFixed(unit ? 1 : 0)} ${units[unit]}`;
+}
