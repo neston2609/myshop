@@ -9,8 +9,10 @@ export const dynamic = "force-dynamic";
 
 type DownloadCategoryPageProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ path?: string }>;
+  searchParams: Promise<{ path?: string; page?: string; perPage?: string }>;
 };
+
+const pageSizeOptions = [25, 50, 75, 100];
 
 function parentPath(value: string) {
   const segments = value.split("/").filter(Boolean);
@@ -18,10 +20,29 @@ function parentPath(value: string) {
   return segments.join("/");
 }
 
+function downloadHref(slug: string, input: { path?: string; page?: number; perPage?: number }) {
+  const params = new URLSearchParams();
+  if (input.path) params.set("path", input.path);
+  if (input.perPage && input.perPage !== pageSizeOptions[0]) params.set("perPage", String(input.perPage));
+  if (input.page && input.page > 1) params.set("page", String(input.page));
+  const query = params.toString();
+  return `/downloads/${slug}${query ? `?${query}` : ""}`;
+}
+
+function paginationPages(currentPage: number, totalPages: number) {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+  const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+  return [...pages].filter((page) => page >= 1 && page <= totalPages).sort((a, b) => a - b);
+}
+
 export default async function DownloadCategoryPage({ params, searchParams }: DownloadCategoryPageProps) {
   const { slug } = await params;
   const query = await searchParams;
   const currentPath = (query.path || "").replace(/^\/+|\/+$/g, "");
+  const requestedPerPage = Number(query.perPage || pageSizeOptions[0]);
+  const perPage = pageSizeOptions.includes(requestedPerPage) ? requestedPerPage : pageSizeOptions[0];
+  const requestedPage = Number(query.page || "1");
+  const currentPage = Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 1;
   const category = await prisma.downloadCategory.findUnique({
     where: { slug },
     include: { source: true },
@@ -47,6 +68,13 @@ export default async function DownloadCategoryPage({ params, searchParams }: Dow
   }
 
   const segments = currentPath.split("/").filter(Boolean);
+  const totalItems = entries.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+  const safePage = Math.min(currentPage, totalPages);
+  const visiblePages = paginationPages(safePage, totalPages);
+  const paginatedEntries = entries.slice((safePage - 1) * perPage, safePage * perPage);
+  const firstItem = totalItems ? (safePage - 1) * perPage + 1 : 0;
+  const lastItem = Math.min(safePage * perPage, totalItems);
 
   return (
     <>
@@ -59,18 +87,18 @@ export default async function DownloadCategoryPage({ params, searchParams }: Dow
             {category.description ? <p className="mt-2 text-slate-600">{category.description}</p> : null}
           </div>
           {currentPath ? (
-            <Link href={`/downloads/${slug}${parentPath(currentPath) ? `?path=${encodeURIComponent(parentPath(currentPath))}` : ""}`} className="h-10 rounded-md border border-black/10 bg-white px-4 py-2 text-sm font-semibold">
+            <Link href={downloadHref(slug, { path: parentPath(currentPath), perPage })} className="h-10 rounded-md border border-black/10 bg-white px-4 py-2 text-sm font-semibold">
               Up folder
             </Link>
           ) : null}
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2 text-sm">
-          <Link href={`/downloads/${slug}`} className={`rounded-md px-3 py-1.5 ${currentPath ? "bg-white" : "bg-[#17201c] text-white"}`}>{category.name}</Link>
+          <Link href={downloadHref(slug, { perPage })} className={`rounded-md px-3 py-1.5 ${currentPath ? "bg-white" : "bg-[#17201c] text-white"}`}>{category.name}</Link>
           {segments.map((segment, index) => {
             const target = segments.slice(0, index + 1).join("/");
             return (
-              <Link key={target} href={`/downloads/${slug}?path=${encodeURIComponent(target)}`} className={`rounded-md px-3 py-1.5 ${index === segments.length - 1 ? "bg-[#17201c] text-white" : "bg-white"}`}>
+              <Link key={target} href={downloadHref(slug, { path: target, perPage })} className={`rounded-md px-3 py-1.5 ${index === segments.length - 1 ? "bg-[#17201c] text-white" : "bg-white"}`}>
                 {segment}
               </Link>
             );
@@ -79,8 +107,28 @@ export default async function DownloadCategoryPage({ params, searchParams }: Dow
 
         {error ? <p className="mt-5 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
 
+        {!error ? (
+          <form className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-black/10 bg-white p-3 text-sm">
+            {currentPath ? <input type="hidden" name="path" value={currentPath} /> : null}
+            <span className="text-slate-600">
+              Showing {firstItem}-{lastItem} of {totalItems} items
+            </span>
+            <label className="flex items-center gap-2 font-semibold text-slate-700">
+              <span>Items per page</span>
+              <select name="perPage" defaultValue={perPage} className="h-10 rounded-md border border-black/10 bg-white px-3">
+                {pageSizeOptions.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+              <button className="h-10 rounded-md bg-[#17201c] px-4 font-semibold text-white transition hover:bg-[#0f766e] active:translate-y-px">
+                Apply
+              </button>
+            </label>
+          </form>
+        ) : null}
+
         <div className="mt-5 overflow-hidden rounded-lg border border-black/10 bg-white">
-          {entries.map((entry) => (
+          {paginatedEntries.map((entry) => (
             <div key={entry.path} className="grid gap-3 border-b border-black/10 p-4 last:border-b-0 md:grid-cols-[1fr_120px_140px] md:items-center">
               <div className="flex min-w-0 items-center gap-3">
                 {entry.type === "dir" ? (
@@ -96,7 +144,7 @@ export default async function DownloadCategoryPage({ params, searchParams }: Dow
               </div>
               <span className="text-sm text-slate-500">{entry.type === "file" ? formatBytes(entry.size) : ""}</span>
               {entry.type === "dir" ? (
-                <Link href={`/downloads/${slug}?path=${encodeURIComponent(entry.path)}`} className="inline-flex h-10 items-center justify-center rounded-md border border-black/10 bg-white px-4 text-sm font-semibold transition hover:bg-slate-50">
+                <Link href={downloadHref(slug, { path: entry.path, perPage })} className="inline-flex h-10 items-center justify-center rounded-md border border-black/10 bg-white px-4 text-sm font-semibold transition hover:bg-slate-50">
                   Open
                 </Link>
               ) : (
@@ -109,6 +157,41 @@ export default async function DownloadCategoryPage({ params, searchParams }: Dow
           ))}
           {!error && entries.length === 0 ? <p className="p-6 text-slate-600">This folder is empty.</p> : null}
         </div>
+
+        {!error && totalItems > perPage ? (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-black/10 bg-white p-3 text-sm">
+            <span className="text-slate-500">Page {safePage} of {totalPages}</span>
+            <div className="flex flex-wrap gap-2">
+              {safePage > 1 ? (
+                <Link href={downloadHref(slug, { path: currentPath, perPage, page: safePage - 1 })} className="inline-flex h-10 items-center rounded-md border border-black/10 px-4 font-semibold transition hover:bg-slate-50 active:translate-y-px">
+                  Previous
+                </Link>
+              ) : null}
+              {visiblePages.map((page, index) => {
+                const previous = visiblePages[index - 1];
+                const showGap = previous && page - previous > 1;
+                return (
+                  <span key={page} className="flex items-center gap-2">
+                    {showGap ? <span className="px-1 text-slate-400">...</span> : null}
+                    <Link
+                      href={downloadHref(slug, { path: currentPath, perPage, page })}
+                      className={`inline-flex h-10 min-w-10 items-center justify-center rounded-md px-3 font-semibold transition active:translate-y-px ${
+                        page === safePage ? "bg-[#17201c] text-white" : "border border-black/10 hover:bg-slate-50"
+                      }`}
+                    >
+                      {page}
+                    </Link>
+                  </span>
+                );
+              })}
+              {safePage < totalPages ? (
+                <Link href={downloadHref(slug, { path: currentPath, perPage, page: safePage + 1 })} className="inline-flex h-10 items-center rounded-md bg-[#17201c] px-4 font-semibold text-white transition hover:bg-[#0f766e] active:translate-y-px">
+                  Next
+                </Link>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
       </main>
     </>
   );
