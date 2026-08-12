@@ -1,9 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { forgotPasswordAction } from "@/app/actions";
 import { SiteHeader } from "@/components/site-header";
 
 type ForgotPasswordPageProps = {
   searchParams: Promise<{ message?: string }>;
+};
+
+export const metadata: Metadata = {
+  title: "Forgot password",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default async function ForgotPasswordPage({ searchParams }: ForgotPasswordPageProps) {

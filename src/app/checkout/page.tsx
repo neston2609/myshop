@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { CheckoutForm } from "@/components/checkout-form";
 import { SiteHeader } from "@/components/site-header";
@@ -7,6 +8,14 @@ import { readPaymentCredentials } from "@/lib/payments";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Checkout",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 type BankTransferCredentials = {
   bankName?: string;

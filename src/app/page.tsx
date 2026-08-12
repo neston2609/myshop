@@ -1,26 +1,59 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Package, ShieldCheck, Sparkles, Truck } from "lucide-react";
+import { JsonLd } from "@/components/json-ld";
 import { ProductCard } from "@/components/product-card";
 import { SiteHeader } from "@/components/site-header";
+import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { absoluteUrl, defaultSeoDescription, defaultSeoTitle, seoBrandName } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
+export const metadata: Metadata = {
+  title: {
+    absolute: defaultSeoTitle,
+  },
+  description: defaultSeoDescription,
+  alternates: {
+    canonical: "/",
+  },
+};
+
 const defaultHero = {
-  eyebrow: "Minimal commerce, ready to grow",
-  title: "Shop essentials with a calmer checkout.",
-  subtitle: "A modern storefront with guest checkout, customer accounts, secure admin controls, uploads, SMTP, payments, and AI configuration.",
+  eyebrow: "ของเล่นญี่ปุ่นและอาร์ตทอยของแท้",
+  title: "POP MART, Labubu, Space Molly และฟิกเกอร์สะสมคัดมาให้แฟนตัวจริง",
+  subtitle: "เลือกซื้อของเล่นญี่ปุ่น กล่องสุ่ม และสินค้าสะสมยอดนิยม พร้อมข้อมูลสินค้า รูปภาพจริง และจัดส่งทั่วไทย",
 };
 
 const defaultFeatures = [
-  { icon: Truck, title: "Configurable shipping", body: "Enable regions, delivery fees, and checkout options from admin." },
-  { icon: ShieldCheck, title: "Secure by default", body: "Hashed passwords, signed sessions, validation, and encrypted secrets." },
-  { icon: Sparkles, title: "AI-ready operations", body: "Choose providers and models for descriptions, SEO text, and assistant features." },
+  { icon: Truck, title: "จัดส่งทั่วไทย", body: "แพ็กสินค้าอย่างระมัดระวัง พร้อมตัวเลือกจัดส่งและโปรโมชันค่าส่งตามเงื่อนไขร้าน" },
+  { icon: ShieldCheck, title: "ชำระเงินปลอดภัย", body: "รองรับการชำระเงินผ่านช่องทางที่ร้านเปิดใช้งาน พร้อมระบบคำสั่งซื้อที่ตรวจสอบย้อนหลังได้" },
+  { icon: Sparkles, title: "คัดสินค้าสะสมน่าเก็บ", body: "รวมของเล่นญี่ปุ่น POP MART อาร์ตทอย ฟิกเกอร์ และสินค้าคอลเลกชันยอดนิยมสำหรับนักสะสม" },
+];
+
+const seoFaqs = [
+  {
+    question: "Japan Toy Shop ขายสินค้าอะไร?",
+    answer: "Japan Toy Shop รวมของเล่นญี่ปุ่น อาร์ตทอย POP MART, Labubu, Space Molly, กล่องสุ่ม และฟิกเกอร์สะสมสำหรับแฟนคอลเลกชันในไทย",
+  },
+  {
+    question: "สินค้ามีทั้งของใหม่และมือสองไหม?",
+    answer: "ร้านมีทั้งสินค้าใหม่และสินค้าคัดสภาพตามรายการสินค้าแต่ละชิ้น ลูกค้าควรอ่านรายละเอียด รูปภาพ และเงื่อนไขก่อนสั่งซื้อ",
+  },
+  {
+    question: "จัดส่งสินค้าไปต่างจังหวัดได้ไหม?",
+    answer: "ร้านรองรับการจัดส่งทั่วประเทศไทย โดยค่าจัดส่งและโปรโมชันจะคำนวณตามเงื่อนไขที่ร้านเปิดใช้งานในขั้นตอน checkout",
+  },
+  {
+    question: "ค้นหาสินค้า POP MART หรือ Labubu ได้จากที่ไหน?",
+    answer: "ลูกค้าสามารถกดดูสินค้าทั้งหมดหรือเลือกหมวดหมู่ เช่น POP MART, Japanese Toys, Collectibles และค้นหาชื่อรุ่นที่ต้องการในหน้า shop",
+  },
 ];
 
 export default async function Home() {
-  const [products, categories, settings] = await Promise.all([
+  const [products, categories, settings, session] = await Promise.all([
     prisma.product.findMany({
       where: { active: true },
       take: 8,
@@ -33,6 +66,7 @@ export default async function Home() {
       include: { _count: { select: { products: true } } },
     }),
     prisma.siteSettings.findFirst(),
+    getSession(),
   ]);
   const hero = {
     eyebrow: settings?.heroEyebrow || defaultHero.eyebrow,
@@ -47,6 +81,33 @@ export default async function Home() {
 
   return (
     <>
+      <JsonLd
+        data={[
+          {
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            name: `สินค้าแนะนำจาก ${seoBrandName}`,
+            itemListElement: products.map((product, index) => ({
+              "@type": "ListItem",
+              position: index + 1,
+              name: product.name,
+              url: absoluteUrl(`/products/${product.slug}`),
+            })),
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: seoFaqs.map((item) => ({
+              "@type": "Question",
+              name: item.question,
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: item.answer,
+              },
+            })),
+          },
+        ]}
+      />
       <SiteHeader />
       <main>
         <section className="overflow-hidden border-b border-[var(--border)] bg-[var(--page)]">
@@ -76,7 +137,7 @@ export default async function Home() {
                 {categories.map((category) => (
                   <Link
                     key={category.id}
-                    href={category.slug ? `/shop?category=${category.slug}` : "/shop"}
+                    href={category.slug ? `/categories/${category.slug}` : "/shop"}
                     className="group grid min-h-[74px] grid-cols-[58px_1fr_24px] items-center gap-3 rounded-md border border-[var(--border)] bg-[var(--surface-raised)] p-2.5 text-[var(--text)]"
                   >
                     <span className="relative h-[58px] w-[58px] overflow-hidden rounded-md bg-[var(--surface-soft)]">
@@ -111,9 +172,11 @@ export default async function Home() {
                 <Link href="/shop" className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[var(--text)] px-5 font-semibold text-[var(--surface)]">
                   Browse products <ArrowRight size={17} />
                 </Link>
-                <Link href="/admin" className="inline-flex h-12 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-5 font-semibold text-[var(--text)]">
-                  Admin dashboard
-                </Link>
+                {session?.role === "ADMIN" ? (
+                  <Link href="/admin" className="inline-flex h-12 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-5 font-semibold text-[var(--text)]">
+                    Admin dashboard
+                  </Link>
+                ) : null}
               </div>
             </div>
           </div>
@@ -140,6 +203,25 @@ export default async function Home() {
           </div>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {products.map((product) => <ProductCard key={product.id} product={product} />)}
+          </div>
+        </section>
+        <section className="border-t border-[var(--border)] bg-[var(--surface)]">
+          <div className="container-shell grid gap-8 py-12 lg:grid-cols-[0.9fr_1.1fr]">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Japan Toy Shop</p>
+              <h2 className="mt-2 text-3xl font-semibold text-[var(--text)]">ร้านของเล่นญี่ปุ่น POP MART และอาร์ตทอยสำหรับนักสะสมในไทย</h2>
+              <p className="mt-4 leading-7 text-[var(--muted)]">
+                เลือกซื้อของเล่นญี่ปุ่น ฟิกเกอร์สะสม กล่องสุ่ม POP MART, Labubu, The Monsters และ Space Molly จากรายการสินค้าที่คัดมาให้ดูง่าย พร้อมรายละเอียด รูปภาพ และราคาชัดเจน เหมาะทั้งสำหรับสะสมเองและเลือกเป็นของขวัญ
+              </p>
+            </div>
+            <div className="grid gap-3">
+              {seoFaqs.map((item) => (
+                <details key={item.question} className="rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] p-4">
+                  <summary className="cursor-pointer font-semibold text-[var(--text)]">{item.question}</summary>
+                  <p className="mt-3 leading-7 text-[var(--muted)]">{item.answer}</p>
+                </details>
+              ))}
+            </div>
           </div>
         </section>
       </main>

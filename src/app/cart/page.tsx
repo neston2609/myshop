@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { updateCartAction } from "@/app/actions";
@@ -6,6 +7,14 @@ import { getCart } from "@/lib/cart";
 import { money } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Cart",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function CartPage() {
   const cart = await getCart();

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { BankLogo } from "@/components/bank-logo";
@@ -10,6 +11,14 @@ import { prisma } from "@/lib/prisma";
 
 type SuccessPageProps = {
   searchParams: Promise<{ order?: string; stripe_session_id?: string; token?: string }>;
+};
+
+export const metadata: Metadata = {
+  title: "Order received",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 async function confirmPayment(params: { orderNumber?: string; stripeSessionId?: string; paypalToken?: string }) {

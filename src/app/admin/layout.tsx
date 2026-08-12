@@ -1,8 +1,17 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminNav } from "@/components/admin-nav";
 import { requireAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Admin dashboard",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin();

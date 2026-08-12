@@ -1,8 +1,10 @@
+import type { Metadata } from "next";
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { ProductCard } from "@/components/product-card";
 import { prisma } from "@/lib/prisma";
+import { defaultSeoDescription, seoBrandName, truncateSeoText } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,53 @@ type ShopPageProps = {
 };
 
 const productsPerPage = 16;
+
+export async function generateMetadata({ searchParams }: ShopPageProps): Promise<Metadata> {
+  const params = await searchParams;
+  const q = params.q?.trim() || "";
+  const requestedPage = Number(params.page || "1");
+  const page = Number.isFinite(requestedPage) && requestedPage > 1 ? Math.floor(requestedPage) : 1;
+  const category = params.category
+    ? await prisma.category.findUnique({
+        where: { slug: params.category },
+        select: { name: true, slug: true, description: true },
+      })
+    : null;
+
+  const title = q
+    ? `ค้นหาสินค้า "${q}"`
+    : category
+      ? `${category.name} ของเล่นญี่ปุ่นและอาร์ตทอย`
+      : "สินค้าทั้งหมด ของเล่นญี่ปุ่น POP MART และ Art Toy";
+  const description = category?.description
+    ? truncateSeoText(category.description)
+    : "เลือกซื้อของเล่นญี่ปุ่น POP MART, Labubu, Space Molly, กล่องสุ่ม, อาร์ตทอย และฟิกเกอร์สะสมของแท้ พร้อมจัดส่งทั่วไทย";
+  const canonicalBase = category ? `/categories/${category.slug}` : "/shop";
+  const canonical = page > 1 ? `${canonicalBase}${canonicalBase.includes("?") ? "&" : "?"}page=${page}` : canonicalBase;
+
+  return {
+    title,
+    description: q ? truncateSeoText(`ผลการค้นหา ${q} บน ${seoBrandName}. ${defaultSeoDescription}`) : description,
+    alternates: {
+      canonical: q ? "/shop" : canonical,
+    },
+    robots: q
+      ? {
+          index: false,
+          follow: true,
+        }
+      : {
+          index: true,
+          follow: true,
+        },
+    openGraph: {
+      title: `${title} | ${seoBrandName}`,
+      description,
+      url: q ? "/shop" : canonical,
+      type: "website",
+    },
+  };
+}
 
 function shopHref(input: { page?: number; category?: string; q?: string }) {
   const params = new URLSearchParams();
@@ -81,7 +130,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
             {categories.map((category) => (
               <Link
                 key={category.id}
-                href={shopHref({ category: category.slug, q })}
+                href={q ? shopHref({ category: category.slug, q }) : `/categories/${category.slug}`}
                 className={`shrink-0 rounded-md border px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 active:translate-y-0 ${
                   params.category === category.slug
                     ? "border-[#0f766e] bg-[#0f766e] text-white"

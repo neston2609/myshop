@@ -1,9 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { resetPasswordAction } from "@/app/actions";
 import { SiteHeader } from "@/components/site-header";
 
 type ResetPasswordPageProps = {
   searchParams: Promise<{ token?: string; message?: string }>;
+};
+
+export const metadata: Metadata = {
+  title: "Reset password",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default async function ResetPasswordPage({ searchParams }: ResetPasswordPageProps) {

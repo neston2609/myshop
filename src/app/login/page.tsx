@@ -1,9 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { loginAction } from "@/app/actions";
 import { SiteHeader } from "@/components/site-header";
 
 type LoginPageProps = {
   searchParams: Promise<{ message?: string }>;
+};
+
+export const metadata: Metadata = {
+  title: "Log in",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {

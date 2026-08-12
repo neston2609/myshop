@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
+import { JsonLd } from "@/components/json-ld";
 import { LiveChatWidget } from "@/components/live-chat-widget";
+import { absoluteUrl, defaultSeoDescription, defaultSeoTitle, seoBrandName, seoKeywords, siteUrl } from "@/lib/seo";
 import { prisma } from "@/lib/prisma";
 import "./globals.css";
 
 const defaultAppearance = {
-  shopName: "MyShop",
+  shopName: seoBrandName,
+  logoUrl: "",
+  faviconUrl: "",
   brandColor: "#111827",
   themeMode: "WHITE",
   fontFamily: "TH_SARABUN_PSK",
@@ -32,6 +36,8 @@ async function getSiteAppearance() {
     const settings = await prisma.siteSettings.findFirst({
       select: {
         shopName: true,
+        logoUrl: true,
+        faviconUrl: true,
         brandColor: true,
         themeMode: true,
         fontFamily: true,
@@ -44,6 +50,8 @@ async function getSiteAppearance() {
 
     return {
       shopName: settings?.shopName?.trim() || defaultAppearance.shopName,
+      logoUrl: settings?.logoUrl || defaultAppearance.logoUrl,
+      faviconUrl: settings?.faviconUrl || defaultAppearance.faviconUrl,
       brandColor: settings?.brandColor || defaultAppearance.brandColor,
       themeMode: settings?.themeMode || defaultAppearance.themeMode,
       fontFamily: settings?.fontFamily || defaultAppearance.fontFamily,
@@ -57,20 +65,51 @@ async function getSiteAppearance() {
   }
 }
 
-async function getShopName() {
-  return (await getSiteAppearance()).shopName;
-}
-
 export async function generateMetadata(): Promise<Metadata> {
-  const shopName = await getShopName();
+  const appearance = await getSiteAppearance();
+  const previewImage = appearance.logoUrl ? absoluteUrl(appearance.logoUrl) : undefined;
 
   return {
+    metadataBase: new URL(siteUrl),
     title: {
-      default: shopName,
-      template: `%s | ${shopName}`,
+      default: defaultSeoTitle,
+      template: `%s | ${seoBrandName}`,
     },
-    description:
-      "A clean, production-ready shopping website with customer checkout, admin tools, and PostgreSQL-backed commerce operations.",
+    description: defaultSeoDescription,
+    applicationName: seoBrandName,
+    keywords: seoKeywords,
+    creator: seoBrandName,
+    publisher: seoBrandName,
+    alternates: {
+      canonical: "/",
+    },
+    icons: appearance.faviconUrl ? { icon: absoluteUrl(appearance.faviconUrl) } : undefined,
+    openGraph: {
+      title: defaultSeoTitle,
+      description: defaultSeoDescription,
+      url: "/",
+      siteName: seoBrandName,
+      locale: "th_TH",
+      type: "website",
+      images: previewImage ? [{ url: previewImage, alt: `${appearance.shopName} logo` }] : undefined,
+    },
+    twitter: {
+      card: previewImage ? "summary_large_image" : "summary",
+      title: defaultSeoTitle,
+      description: defaultSeoDescription,
+      images: previewImage ? [previewImage] : undefined,
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
+    },
   };
 }
 
@@ -81,16 +120,41 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const sourceLastUpdated = formatBuildDate(process.env.NEXT_PUBLIC_SOURCE_LAST_UPDATED);
 
   return (
-    <html
-      lang="en"
-      className="h-full antialiased"
-    >
+    <html lang="th" className="h-full antialiased">
       <body
         className="min-h-full flex flex-col"
         data-theme={appearance.themeMode}
         data-font={appearance.fontFamily}
         style={{ "--brand": appearance.brandColor } as CSSProperties}
       >
+        <JsonLd
+          data={[
+            {
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              name: seoBrandName,
+              alternateName: appearance.shopName,
+              url: siteUrl,
+              inLanguage: "th-TH",
+              potentialAction: {
+                "@type": "SearchAction",
+                target: `${siteUrl}/shop?q={search_term_string}`,
+                "query-input": "required name=search_term_string",
+              },
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "Store",
+              name: seoBrandName,
+              url: siteUrl,
+              logo: appearance.logoUrl ? absoluteUrl(appearance.logoUrl) : undefined,
+              image: appearance.logoUrl ? absoluteUrl(appearance.logoUrl) : undefined,
+              description: defaultSeoDescription,
+              priceRange: "THB",
+              areaServed: "TH",
+            },
+          ]}
+        />
         {children}
         <LiveChatWidget enabled={appearance.liveChatEnabled} lineOaId={appearance.lineOaId} prompt={appearance.lineChatPrompt} />
         <footer className="mt-auto border-t border-[var(--border)] bg-[var(--surface)] text-[var(--muted)]">
