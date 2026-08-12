@@ -19,7 +19,7 @@ export default async function DownloadsPage() {
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((category) => (
             <Link key={category.id} href={`/downloads/${category.slug}`} className="overflow-hidden rounded-lg border border-black/10 bg-white transition hover:-translate-y-0.5 hover:shadow-lg">
-              <div className="relative h-40 bg-slate-100">
+              <div className="relative aspect-square bg-slate-100">
                 {category.imageUrl ? (
                   <Image src={category.imageUrl} alt={category.name} fill sizes="(min-width: 1024px) 33vw, 100vw" className="object-cover" />
                 ) : (

@@ -85,7 +85,7 @@ export default async function DownloadCategoryPage({ params, searchParams }: Dow
               <div className="flex min-w-0 items-center gap-3">
                 {entry.type === "dir" ? (
                   entry.thumb ? (
-                    <Image src={`/api/downloads/${slug}/thumb?path=${encodeURIComponent(entry.thumb)}`} alt="" width={72} height={54} className="h-14 w-20 rounded-md border border-black/10 object-contain" />
+                    <Image src={`/api/downloads/${slug}/thumb?path=${encodeURIComponent(entry.thumb)}`} alt="" width={64} height={64} className="h-16 w-16 shrink-0 rounded-md border border-black/10 object-cover" />
                   ) : (
                     <Folder className="shrink-0 text-[#0f766e]" size={28} />
                   )
