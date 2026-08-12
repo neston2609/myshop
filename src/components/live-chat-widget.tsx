@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react";
 import { ExternalLink, MessageCircle, Send, X } from "lucide-react";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 type LiveChatWidgetProps = {
   enabled: boolean;
@@ -25,9 +25,25 @@ function isProductPath(pathname: string) {
 }
 
 type ChatMessage = {
-  role: "customer" | "system";
+  id?: string;
+  role: "customer" | "admin" | "system";
   text: string;
 };
+
+type ApiChatMessage = {
+  id: string;
+  sender: string;
+  body: string;
+  createdAt: string;
+};
+
+function mapApiMessage(item: ApiChatMessage): ChatMessage {
+  return {
+    id: item.id,
+    role: item.sender === "ADMIN" ? "admin" : "customer",
+    text: item.body,
+  };
+}
 
 export function LiveChatWidget({ enabled, lineOaId, prompt }: LiveChatWidgetProps) {
   const [panelOpen, setPanelOpen] = useState(false);
@@ -39,6 +55,34 @@ export function LiveChatWidget({ enabled, lineOaId, prompt }: LiveChatWidgetProp
   ]);
   const [isPending, startTransition] = useTransition();
   const chatRef = useMemo(() => `LC-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`, []);
+
+  useEffect(() => {
+    if (!panelOpen) return undefined;
+
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const response = await fetch(`/api/live-chat/message?chatRef=${encodeURIComponent(chatRef)}`, { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json() as { messages?: ApiChatMessage[] };
+        if (cancelled || !data.messages?.length) return;
+        const apiMessages = data.messages.map(mapApiMessage);
+        setMessages((current) => {
+          const systemMessages = current.filter((item) => item.role === "system");
+          return [...systemMessages, ...apiMessages];
+        });
+      } catch {
+        // Polling is best-effort; sending still works without it.
+      }
+    };
+
+    void poll();
+    const timer = window.setInterval(poll, 3500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [chatRef, panelOpen]);
 
   if (!enabled || !lineOaId.trim()) return null;
 
@@ -95,7 +139,15 @@ export function LiveChatWidget({ enabled, lineOaId, prompt }: LiveChatWidgetProp
           });
           const data = await response.json().catch(() => ({}));
           if (!response.ok) throw new Error(data.error || "ส่งข้อความไม่สำเร็จ");
-          setMessages((current) => [...current, { role: "system", text: "ส่งข้อความเข้า LINE ร้านแล้วครับ ร้านจะติดต่อกลับตามช่องทางที่แจ้งไว้" }]);
+          if (Array.isArray(data.messages)) {
+            const apiMessages = (data.messages as ApiChatMessage[]).map(mapApiMessage);
+            setMessages((current) => {
+              const systemMessages = current.filter((item) => item.role === "system");
+              return [...systemMessages, ...apiMessages, { role: "system", text: "ส่งข้อความเข้า LINE ร้านแล้วครับ รอคำตอบในกล่องนี้ได้เลย" }];
+            });
+          } else {
+            setMessages((current) => [...current, { role: "system", text: "ส่งข้อความเข้า LINE ร้านแล้วครับ รอคำตอบในกล่องนี้ได้เลย" }]);
+          }
         } catch (error) {
           setMessages((current) => [
             ...current,
@@ -117,6 +169,7 @@ export function LiveChatWidget({ enabled, lineOaId, prompt }: LiveChatWidgetProp
             <div className="min-w-0">
               <p className="font-semibold">LINE Live Chat</p>
               <p className="mt-0.5 text-sm text-white/85">ข้อความจะถูกส่งเข้า LINE ของร้าน</p>
+              <p className="mt-1 text-xs text-white/75">Chat ref: {chatRef}</p>
             </div>
             <button type="button" onClick={() => setPanelOpen(false)} className="rounded-md p-1 text-white/90 hover:bg-white/15">
               <X size={18} />
@@ -127,11 +180,14 @@ export function LiveChatWidget({ enabled, lineOaId, prompt }: LiveChatWidgetProp
             <div className="grid gap-2">
               {messages.map((item, index) => (
                 <div
-                  key={`${item.role}-${index}`}
+                  key={item.id || `${item.role}-${index}`}
                   className={item.role === "customer"
                     ? "ml-8 rounded-lg bg-[#06c755] px-3 py-2 text-sm text-white"
-                    : "mr-8 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-sm text-[var(--text)]"}
+                    : item.role === "admin"
+                      ? "mr-8 rounded-lg bg-[var(--accent-soft)] px-3 py-2 text-sm text-[var(--text)]"
+                      : "mr-8 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-sm text-[var(--text)]"}
                 >
+                  {item.role === "admin" ? <span className="mb-1 block text-xs font-semibold text-[var(--accent)]">ร้านค้า</span> : null}
                   {item.text}
                 </div>
               ))}

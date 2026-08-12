@@ -59,6 +59,32 @@ async function pushLineText(token: string, to: string, text: string) {
   }
 }
 
+export async function GET(request: NextRequest) {
+  const chatRef = cleanText(request.nextUrl.searchParams.get("chatRef") || "", 80);
+  if (!chatRef) return NextResponse.json({ error: "Missing chatRef." }, { status: 400 });
+
+  const conversation = await prisma.liveChatConversation.findUnique({
+    where: { chatRef },
+    select: {
+      chatRef: true,
+      status: true,
+      messages: {
+        orderBy: { createdAt: "asc" },
+        take: 100,
+        select: {
+          id: true,
+          sender: true,
+          body: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+
+  if (!conversation) return NextResponse.json({ chatRef, status: "OPEN", messages: [] });
+  return NextResponse.json(conversation);
+}
+
 export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "anonymous";
   if (!checkRateLimit(`live-chat-message:${ip}`, 8, 60_000)) {
@@ -93,6 +119,7 @@ export async function POST(request: NextRequest) {
     ? await prisma.product.findUnique({
         where: { slug },
         select: {
+          id: true,
           name: true,
           sku: true,
           price: true,
@@ -102,10 +129,55 @@ export async function POST(request: NextRequest) {
       })
     : null;
 
+  const chatRef = cleanText(body.chatRef, 80) || `LC-${Date.now().toString(36).toUpperCase()}`;
   const productUrl = slug ? `${originFromRequest(request)}/products/${encodeURIComponent(slug)}` : "";
+  const conversation = await prisma.liveChatConversation.upsert({
+    where: { chatRef },
+    create: {
+      chatRef,
+      customerName: cleanText(body.name, 120) || null,
+      customerContact: cleanText(body.contact, 160) || null,
+      pageUrl: body.pageUrl?.startsWith("http") ? body.pageUrl : productUrl || originFromRequest(request),
+      pageTitle: cleanText(body.pageTitle, 240) || null,
+      productId: product?.id || null,
+      productName: product?.name || null,
+      lineRecipientId: settings.lineAdminRecipientId,
+      messages: {
+        create: {
+          sender: "CUSTOMER",
+          body: message,
+          source: "WEB",
+        },
+      },
+    },
+    update: {
+      customerName: cleanText(body.name, 120) || undefined,
+      customerContact: cleanText(body.contact, 160) || undefined,
+      pageUrl: body.pageUrl?.startsWith("http") ? body.pageUrl : productUrl || undefined,
+      pageTitle: cleanText(body.pageTitle, 240) || undefined,
+      productId: product?.id || undefined,
+      productName: product?.name || undefined,
+      lineRecipientId: settings.lineAdminRecipientId,
+      messages: {
+        create: {
+          sender: "CUSTOMER",
+          body: message,
+          source: "WEB",
+        },
+      },
+    },
+    include: {
+      messages: {
+        orderBy: { createdAt: "asc" },
+        take: 50,
+      },
+    },
+  });
+
   const lines = [
     `ข้อความ Live Chat จากเว็บ ${settings.shopName || "ร้านค้า"}`,
-    body.chatRef ? `Chat ref: ${cleanText(body.chatRef, 80)}` : "",
+    `Chat ref: ${conversation.chatRef}`,
+    `ตอบกลับเว็บ: REPLY ${conversation.chatRef} ข้อความที่ต้องการตอบ`,
     "",
     `ข้อความ: ${message}`,
     cleanText(body.name, 120) ? `ชื่อ: ${cleanText(body.name, 120)}` : "",
@@ -122,7 +194,16 @@ export async function POST(request: NextRequest) {
 
   try {
     await pushLineText(token, settings.lineAdminRecipientId, lines.join("\n"));
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      chatRef: conversation.chatRef,
+      messages: conversation.messages.map((item) => ({
+        id: item.id,
+        sender: item.sender,
+        body: item.body,
+        createdAt: item.createdAt,
+      })),
+    });
   } catch {
     return NextResponse.json({ error: "ส่งข้อความเข้า LINE ไม่สำเร็จ กรุณาตรวจสอบ Channel access token และ Admin recipient" }, { status: 502 });
   }

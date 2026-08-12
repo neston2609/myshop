@@ -281,6 +281,40 @@ model SiteSettings {
   updatedAt                   DateTime @updatedAt
 }
 
+model LiveChatConversation {
+  id              String            @id @default(cuid())
+  chatRef         String            @unique
+  customerName    String?
+  customerContact String?
+  pageUrl         String?
+  pageTitle       String?
+  productId       String?
+  productName     String?
+  lineRecipientId String?
+  status          String            @default("OPEN")
+  messages        LiveChatMessage[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([chatRef])
+  @@index([lineRecipientId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model LiveChatMessage {
+  id             String               @id @default(cuid())
+  conversationId String
+  conversation   LiveChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         String
+  body           String
+  source         String               @default("WEB")
+  createdAt      DateTime             @default(now())
+
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
 model Cart {
   id        String     @id @default(cuid())
   userId    String?

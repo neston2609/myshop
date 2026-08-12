@@ -42,6 +42,16 @@ function isRegisterAdminMessage(event: LineWebhookEvent) {
   return text === "REGISTER_ADMIN" || text === "ADMIN" || text === "ตั้งค่าแอดมิน";
 }
 
+function parseAdminReply(event: LineWebhookEvent) {
+  const text = event.message?.type === "text" ? event.message.text?.trim() || "" : "";
+  const match = text.match(/^(?:REPLY|ตอบ)\s+(LC-[A-Z0-9-]+)\s+([\s\S]+)/i);
+  if (!match?.[1] || !match[2]?.trim()) return null;
+  return {
+    chatRef: match[1].toUpperCase(),
+    body: match[2].trim().slice(0, 1600),
+  };
+}
+
 async function replyLineMessage(token: string, replyToken: string, text: string) {
   if (!token || !replyToken) return;
   await fetch("https://api.line.me/v2/bot/message/reply", {
@@ -65,6 +75,7 @@ export async function POST(request: NextRequest) {
       id: true,
       lineChannelSecretCiphertext: true,
       lineChannelTokenCiphertext: true,
+      lineAdminRecipientId: true,
     },
   });
 
@@ -78,24 +89,54 @@ export async function POST(request: NextRequest) {
   const token = decryptSecret(settings?.lineChannelTokenCiphertext);
 
   for (const event of events) {
-    if (!settings?.id || !isRegisterAdminMessage(event)) continue;
+    if (!settings?.id) continue;
 
     const recipientId = sourceRecipientId(event);
     if (!recipientId) continue;
 
-    await prisma.siteSettings.update({
-      where: { id: settings.id },
-      data: {
-        lineAdminRecipientId: recipientId,
-        lineNotifyProductContext: true,
-      },
+    if (isRegisterAdminMessage(event)) {
+      await prisma.siteSettings.update({
+        where: { id: settings.id },
+        data: {
+          lineAdminRecipientId: recipientId,
+          lineNotifyProductContext: true,
+        },
+      });
+
+      await replyLineMessage(
+        token,
+        event.replyToken || "",
+        `ตั้งค่า Admin recipient สำเร็จแล้ว\nRecipient ID: ${recipientId}`,
+      );
+      continue;
+    }
+
+    const adminReply = parseAdminReply(event);
+    if (!adminReply || recipientId !== settings.lineAdminRecipientId) continue;
+
+    const conversation = await prisma.liveChatConversation.findUnique({
+      where: { chatRef: adminReply.chatRef },
+      select: { id: true, chatRef: true },
     });
 
-    await replyLineMessage(
-      token,
-      event.replyToken || "",
-      `ตั้งค่า Admin recipient สำเร็จแล้ว\nRecipient ID: ${recipientId}`,
-    );
+    if (!conversation) {
+      await replyLineMessage(token, event.replyToken || "", `ไม่พบ Live Chat ref: ${adminReply.chatRef}`);
+      continue;
+    }
+
+    await prisma.liveChatMessage.create({
+      data: {
+        conversationId: conversation.id,
+        sender: "ADMIN",
+        body: adminReply.body,
+        source: "LINE",
+      },
+    });
+    await prisma.liveChatConversation.update({
+      where: { id: conversation.id },
+      data: { status: "OPEN" },
+    });
+    await replyLineMessage(token, event.replyToken || "", `ส่งคำตอบกลับเว็บแล้ว (${conversation.chatRef})`);
   }
 
   return NextResponse.json({ ok: true });
