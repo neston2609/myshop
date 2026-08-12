@@ -35,6 +35,10 @@ function safeLineText(value: string, maxLength = 4800) {
   return value.length > maxLength ? `${value.slice(0, maxLength - 3)}...` : value;
 }
 
+function validLineRecipientId(value?: string | null) {
+  return Boolean(value && /^[UCR][a-zA-Z0-9_-]{8,}$/.test(value));
+}
+
 async function pushLineText(token: string, to: string, text: string) {
   const response = await fetch("https://api.line.me/v2/bot/message/push", {
     method: "POST",
@@ -77,6 +81,11 @@ export async function POST(request: NextRequest) {
   const token = decryptSecret(settings?.lineChannelTokenCiphertext);
   if (!token || !settings?.lineAdminRecipientId) {
     return NextResponse.json({ error: "ยังไม่ได้ตั้งค่า LINE Messaging API หรือ Admin recipient ในระบบ" }, { status: 400 });
+  }
+  if (!validLineRecipientId(settings.lineAdminRecipientId)) {
+    return NextResponse.json({
+      error: "LINE Admin recipient ID ไม่ถูกต้อง ต้องขึ้นต้นด้วย U, C หรือ R กรุณาพิมพ์ REGISTER_ADMIN ไปหา LINE OA เพื่อลงทะเบียนใหม่",
+    }, { status: 400 });
   }
 
   const slug = productSlugFromPath(body.path);

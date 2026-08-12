@@ -99,6 +99,7 @@ export default async function AdminSettingsPage() {
               <label className="grid gap-1 text-sm font-medium">
                 Admin recipient user/group ID
                 <input name="lineAdminRecipientId" defaultValue={site?.lineAdminRecipientId || ""} placeholder="U..., C..., or R..." className="h-10 rounded-md border border-black/10 px-3 font-normal" />
+                <span className="text-xs font-normal text-slate-500">ต้องขึ้นต้นด้วย U, C หรือ R เท่านั้น วิธีง่ายสุดคือเปิด Use webhook แล้วพิมพ์ REGISTER_ADMIN ไปหา LINE OA หรือใน group ที่มี OA อยู่</span>
               </label>
             </div>
             <label className="grid gap-1 text-sm font-medium">

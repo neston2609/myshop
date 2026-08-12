@@ -195,7 +195,14 @@ export const siteSettingsSchema = z.object({
   lineChatPrompt: z.string().trim().min(1).max(500).default("สวัสดีครับ สนใจสอบถามสินค้า"),
   lineChannelAccessToken: z.string().trim().max(2000).optional(),
   lineChannelSecret: z.string().trim().max(200).optional(),
-  lineAdminRecipientId: z.string().trim().max(200).optional(),
+  lineAdminRecipientId: z
+    .string()
+    .trim()
+    .max(200)
+    .refine((value) => value === "" || /^[UCR][a-zA-Z0-9_-]{8,}$/.test(value), {
+      message: "LINE recipient ID must start with U, C, or R. Send REGISTER_ADMIN to the LINE OA to register it automatically.",
+    })
+    .optional(),
   lineNotifyProductContext: z.coerce.boolean().default(false),
 });
 

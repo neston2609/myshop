@@ -27,6 +27,10 @@ function safeText(value: string, maxLength = 4800) {
   return value.length > maxLength ? `${value.slice(0, maxLength - 3)}...` : value;
 }
 
+function validLineRecipientId(value?: string | null) {
+  return Boolean(value && /^[UCR][a-zA-Z0-9_-]{8,}$/.test(value));
+}
+
 async function pushLineText(token: string, to: string, text: string) {
   const response = await fetch("https://api.line.me/v2/bot/message/push", {
     method: "POST",
@@ -60,7 +64,12 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  if (!settings?.lineNotifyProductContext || !settings.lineAdminRecipientId || !settings.lineChannelTokenCiphertext) {
+  if (
+    !settings?.lineNotifyProductContext ||
+    !settings.lineAdminRecipientId ||
+    !validLineRecipientId(settings.lineAdminRecipientId) ||
+    !settings.lineChannelTokenCiphertext
+  ) {
     return NextResponse.json({ ok: true, notified: false });
   }
 
