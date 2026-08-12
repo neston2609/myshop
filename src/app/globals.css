@@ -50,6 +50,7 @@ body[data-theme="WHITE"] {
   --panel-text: #f8faf7;
   --accent: var(--brand);
   --accent-soft: color-mix(in srgb, var(--brand) 10%, transparent);
+  --order-separator: #2563eb;
   --shadow-soft: 0 24px 60px rgba(15, 23, 42, 0.08);
 }
 
@@ -69,6 +70,7 @@ body[data-theme="BLACK"] {
   --panel-text: #111612;
   --accent: #8ee3d9;
   --accent-soft: rgba(142, 227, 217, 0.12);
+  --order-separator: #facc15;
   --shadow-soft: 0 28px 80px rgba(0, 0, 0, 0.34);
 }
 
@@ -217,6 +219,20 @@ button:disabled {
 
 .soft-shadow {
   box-shadow: var(--shadow-soft);
+}
+
+.admin-order-card {
+  border-bottom: 1px solid var(--order-separator);
+}
+
+.admin-order-card:last-child {
+  border-bottom: 0;
+}
+
+.admin-order-tracking {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
 }
 
 .product-html {

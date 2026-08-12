@@ -54,7 +54,7 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
           {message}
         </p>
       ) : null}
-      <div className="mt-4 divide-y divide-black/10">
+      <div className="mt-4">
         {orders.map((order) => {
           const shippingLine = [
             order.customerName,
@@ -70,7 +70,7 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
           const carrier = findShippingCarrier(order.trackingCarrierCode);
           const trackingUrl = trackingHref(order.trackingCarrierCode, order.trackingNumber);
           return (
-            <article key={order.id} className="py-4">
+            <article key={order.id} className="admin-order-card py-4">
               <div className="grid gap-2 text-sm md:grid-cols-[1fr_150px_120px_100px]">
                 <span className="font-medium">{order.orderNumber}<span className="ml-2 text-slate-400">{order.customerEmail}</span></span>
                 <span>{order.status}</span>
@@ -108,8 +108,8 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
                 </div>
               ) : null}
               {order.trackingNumber && !isEditingTracking ? (
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm">
-                  <div className="grid gap-1 text-emerald-950">
+                <div className="admin-order-tracking mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md p-3 text-sm">
+                  <div className="grid gap-1">
                     <p className="font-semibold">Tracking saved</p>
                     <p>ขนส่ง: {order.trackingCarrierName || carrier?.name || order.trackingCarrierCode || "-"}</p>
                     {trackingUrl ? (
@@ -120,7 +120,7 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
                       <p>Tracking: {order.trackingNumber}</p>
                     )}
                   </div>
-                  <Link href={trackingEditLink(safePage, order.id)} className="inline-flex h-10 items-center rounded-md border border-emerald-200 bg-white px-4 font-semibold text-emerald-900 transition hover:bg-emerald-100 active:translate-y-px">
+                  <Link href={trackingEditLink(safePage, order.id)} className="inline-flex h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface-raised)] px-4 font-semibold text-[var(--text)] transition hover:bg-[var(--surface-soft)] active:translate-y-px">
                     Edit
                   </Link>
                 </div>
