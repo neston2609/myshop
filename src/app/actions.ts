@@ -856,6 +856,14 @@ export async function saveSiteSettingsAction(formData: FormData) {
     orderNotificationEmail: input.orderNotificationEmail || null,
     remoteAreaFee: input.remoteAreaFee,
     remotePostalCodes: normalizePostalCodes(input.remotePostalCodes || ""),
+    liveChatEnabled: input.liveChatEnabled,
+    lineOaId: input.lineOaId.startsWith("@") ? input.lineOaId : `@${input.lineOaId}`,
+    lineChatPrompt: input.lineChatPrompt,
+    lineChannelTokenCiphertext: input.lineChannelAccessToken?.trim()
+      ? encryptSecret(input.lineChannelAccessToken.trim())
+      : current?.lineChannelTokenCiphertext || null,
+    lineAdminRecipientId: input.lineAdminRecipientId?.trim() || null,
+    lineNotifyProductContext: input.lineNotifyProductContext,
   };
   if (current) await prisma.siteSettings.update({ where: { id: current.id }, data });
   else await prisma.siteSettings.create({ data });

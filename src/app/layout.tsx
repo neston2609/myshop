@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
+import { LiveChatWidget } from "@/components/live-chat-widget";
 import { prisma } from "@/lib/prisma";
 import "./globals.css";
 
@@ -9,6 +10,9 @@ const defaultAppearance = {
   themeMode: "WHITE",
   fontFamily: "TH_SARABUN_PSK",
   footerText: "",
+  liveChatEnabled: true,
+  lineOaId: "@retroconsole1981",
+  lineChatPrompt: "สวัสดีครับ สนใจสอบถามสินค้า",
 };
 
 function formatBuildDate(value?: string) {
@@ -26,7 +30,16 @@ function formatBuildDate(value?: string) {
 async function getSiteAppearance() {
   try {
     const settings = await prisma.siteSettings.findFirst({
-      select: { shopName: true, brandColor: true, themeMode: true, fontFamily: true, footerText: true },
+      select: {
+        shopName: true,
+        brandColor: true,
+        themeMode: true,
+        fontFamily: true,
+        footerText: true,
+        liveChatEnabled: true,
+        lineOaId: true,
+        lineChatPrompt: true,
+      },
     });
 
     return {
@@ -35,6 +48,9 @@ async function getSiteAppearance() {
       themeMode: settings?.themeMode || defaultAppearance.themeMode,
       fontFamily: settings?.fontFamily || defaultAppearance.fontFamily,
       footerText: settings?.footerText || defaultAppearance.footerText,
+      liveChatEnabled: settings?.liveChatEnabled ?? defaultAppearance.liveChatEnabled,
+      lineOaId: settings?.lineOaId || defaultAppearance.lineOaId,
+      lineChatPrompt: settings?.lineChatPrompt || defaultAppearance.lineChatPrompt,
     };
   } catch {
     return defaultAppearance;
@@ -76,6 +92,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         style={{ "--brand": appearance.brandColor } as CSSProperties}
       >
         {children}
+        <LiveChatWidget enabled={appearance.liveChatEnabled} lineOaId={appearance.lineOaId} prompt={appearance.lineChatPrompt} />
         <footer className="mt-auto border-t border-[var(--border)] bg-[var(--surface)] text-[var(--muted)]">
           <div className="container-shell flex flex-col gap-3 py-5 text-sm md:flex-row md:items-center md:justify-between">
             <p className="whitespace-pre-line">{footerText}</p>

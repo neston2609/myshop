@@ -190,6 +190,12 @@ export const siteSettingsSchema = z.object({
   orderNotificationEmail: z.string().email().optional().or(z.literal("")),
   remoteAreaFee: z.coerce.number().min(0).max(100000).default(50),
   remotePostalCodes: z.string().max(20000).optional(),
+  liveChatEnabled: z.coerce.boolean().default(false),
+  lineOaId: z.string().trim().min(2).max(80).default("@retroconsole1981"),
+  lineChatPrompt: z.string().trim().min(1).max(500).default("สวัสดีครับ สนใจสอบถามสินค้า"),
+  lineChannelAccessToken: z.string().trim().max(2000).optional(),
+  lineAdminRecipientId: z.string().trim().max(200).optional(),
+  lineNotifyProductContext: z.coerce.boolean().default(false),
 });
 
 export const downloadSourceSchema = z.object({

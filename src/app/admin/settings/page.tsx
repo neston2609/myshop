@@ -81,6 +81,38 @@ export default async function AdminSettingsPage() {
           </div>
           <div className="grid gap-3 border-t border-black/10 pt-4">
             <div>
+              <h3 className="text-sm font-semibold">LINE live chat</h3>
+              <p className="mt-1 text-xs text-slate-500">Show a floating chat button on every page and optionally notify your LINE admin when a customer starts from a product page.</p>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input name="liveChatEnabled" type="checkbox" defaultChecked={site?.liveChatEnabled ?? true} />
+              Enable live chat button
+            </label>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="grid gap-1 text-sm font-medium">
+                LINE OA ID
+                <input name="lineOaId" defaultValue={site?.lineOaId || "@retroconsole1981"} placeholder="@retroconsole1981" className="h-10 rounded-md border border-black/10 px-3 font-normal" />
+              </label>
+              <label className="grid gap-1 text-sm font-medium">
+                Admin recipient user/group ID
+                <input name="lineAdminRecipientId" defaultValue={site?.lineAdminRecipientId || ""} placeholder="U..., C..., or R..." className="h-10 rounded-md border border-black/10 px-3 font-normal" />
+              </label>
+            </div>
+            <label className="grid gap-1 text-sm font-medium">
+              Default chat message
+              <textarea name="lineChatPrompt" defaultValue={site?.lineChatPrompt || "สวัสดีครับ สนใจสอบถามสินค้า"} rows={3} className="rounded-md border border-black/10 px-3 py-2 font-normal" />
+            </label>
+            <label className="grid gap-1 text-sm font-medium">
+              LINE Messaging API channel access token
+              <input name="lineChannelAccessToken" type="password" placeholder={site?.lineChannelTokenCiphertext ? "Token saved - leave blank to keep current token" : "Paste long-lived channel access token"} className="h-10 rounded-md border border-black/10 px-3 font-normal" />
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input name="lineNotifyProductContext" type="checkbox" defaultChecked={site?.lineNotifyProductContext ?? false} />
+              Notify admin in LINE when chat starts from a product page
+            </label>
+          </div>
+          <div className="grid gap-3 border-t border-black/10 pt-4">
+            <div>
               <h3 className="text-sm font-semibold">Header navigation</h3>
               <p className="mt-1 text-xs text-slate-500">Add menu links and choose whether each link opens in the same page or a new tab.</p>
             </div>
