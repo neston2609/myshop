@@ -1,7 +1,10 @@
 import { AdminLiveChatPanel } from "@/components/admin-live-chat-panel";
+import { cleanupExpiredLiveChatConversations } from "@/lib/live-chat-cleanup";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminLiveChatPage() {
+  await cleanupExpiredLiveChatConversations();
+
   const conversations = await prisma.liveChatConversation.findMany({
     orderBy: { updatedAt: "desc" },
     take: 50,

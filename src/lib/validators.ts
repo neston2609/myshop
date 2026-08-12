@@ -191,6 +191,7 @@ export const siteSettingsSchema = z.object({
   remoteAreaFee: z.coerce.number().min(0).max(100000).default(50),
   remotePostalCodes: z.string().max(20000).optional(),
   liveChatEnabled: z.coerce.boolean().default(false),
+  liveChatRetentionDays: z.coerce.number().int().min(1).max(365).default(7),
   lineOaId: z.string().trim().min(2).max(80).default("@retroconsole1981"),
   lineChatPrompt: z.string().trim().min(1).max(500).default("สวัสดีครับ สนใจสอบถามสินค้า"),
   lineChannelAccessToken: z.string().trim().max(2000).optional(),

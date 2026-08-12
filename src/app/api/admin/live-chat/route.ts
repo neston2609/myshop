@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
+import { cleanupExpiredLiveChatConversations } from "@/lib/live-chat-cleanup";
 import { prisma } from "@/lib/prisma";
 
 function cleanText(value?: string | null, maxLength = 1000) {
@@ -32,6 +33,7 @@ function mapConversation(conversation: {
 
 export async function GET() {
   await requireAdmin();
+  await cleanupExpiredLiveChatConversations();
 
   const conversations = await prisma.liveChatConversation.findMany({
     orderBy: { updatedAt: "desc" },
@@ -66,6 +68,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   await requireAdmin();
+  await cleanupExpiredLiveChatConversations();
 
   const body = await request.json().catch(() => ({})) as { chatRef?: string; message?: string; status?: string };
   const chatRef = cleanText(body.chatRef, 80).toUpperCase();

@@ -857,6 +857,7 @@ export async function saveSiteSettingsAction(formData: FormData) {
     remoteAreaFee: input.remoteAreaFee,
     remotePostalCodes: normalizePostalCodes(input.remotePostalCodes || ""),
     liveChatEnabled: input.liveChatEnabled,
+    liveChatRetentionDays: input.liveChatRetentionDays,
     lineOaId: input.lineOaId.startsWith("@") ? input.lineOaId : `@${input.lineOaId}`,
     lineChatPrompt: input.lineChatPrompt,
     lineChannelTokenCiphertext: input.lineChannelAccessToken?.trim()

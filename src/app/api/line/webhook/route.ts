@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { decryptSecret } from "@/lib/crypto";
+import { cleanupExpiredLiveChatConversations } from "@/lib/live-chat-cleanup";
 import { prisma } from "@/lib/prisma";
 
 type LineWebhookEvent = {
@@ -70,6 +71,8 @@ async function replyLineMessage(token: string, replyToken: string, text: string)
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
+  await cleanupExpiredLiveChatConversations();
+
   const settings = await prisma.siteSettings.findFirst({
     select: {
       id: true,

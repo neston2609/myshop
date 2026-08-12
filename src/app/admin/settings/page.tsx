@@ -91,6 +91,18 @@ export default async function AdminSettingsPage() {
               <input name="liveChatEnabled" type="checkbox" defaultChecked={site?.liveChatEnabled ?? true} />
               Enable live chat button
             </label>
+            <label className="grid gap-1 text-sm font-medium md:max-w-xs">
+              History retention days
+              <input
+                name="liveChatRetentionDays"
+                defaultValue={site?.liveChatRetentionDays || 7}
+                type="number"
+                min={1}
+                max={365}
+                className="h-10 rounded-md border border-black/10 px-3 font-normal"
+              />
+              <span className="text-xs font-normal text-slate-500">ลบ session ที่ไม่มีความเคลื่อนไหวเกินจำนวนวันที่กำหนด ค่าเริ่มต้น 7 วัน</span>
+            </label>
             <div className="grid gap-3 md:grid-cols-2">
               <label className="grid gap-1 text-sm font-medium">
                 LINE OA ID

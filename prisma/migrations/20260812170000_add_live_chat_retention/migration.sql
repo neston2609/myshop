@@ -1,0 +1,2 @@
+ALTER TABLE "SiteSettings"
+ADD COLUMN "liveChatRetentionDays" INTEGER NOT NULL DEFAULT 7;

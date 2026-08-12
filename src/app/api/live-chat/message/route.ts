@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decryptSecret } from "@/lib/crypto";
 import { money } from "@/lib/format";
+import { cleanupExpiredLiveChatConversations } from "@/lib/live-chat-cleanup";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -60,6 +61,8 @@ async function pushLineText(token: string, to: string, text: string) {
 }
 
 export async function GET(request: NextRequest) {
+  await cleanupExpiredLiveChatConversations();
+
   const chatRef = cleanText(request.nextUrl.searchParams.get("chatRef") || "", 80);
   if (!chatRef) return NextResponse.json({ error: "Missing chatRef." }, { status: 400 });
 
@@ -86,6 +89,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  await cleanupExpiredLiveChatConversations();
+
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "anonymous";
   if (!checkRateLimit(`live-chat-message:${ip}`, 8, 60_000)) {
     return NextResponse.json({ error: "ส่งข้อความถี่เกินไป กรุณารอสักครู่แล้วลองใหม่" }, { status: 429 });
