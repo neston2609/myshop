@@ -862,6 +862,9 @@ export async function saveSiteSettingsAction(formData: FormData) {
     lineChannelTokenCiphertext: input.lineChannelAccessToken?.trim()
       ? encryptSecret(input.lineChannelAccessToken.trim())
       : current?.lineChannelTokenCiphertext || null,
+    lineChannelSecretCiphertext: input.lineChannelSecret?.trim()
+      ? encryptSecret(input.lineChannelSecret.trim())
+      : current?.lineChannelSecretCiphertext || null,
     lineAdminRecipientId: input.lineAdminRecipientId?.trim() || null,
     lineNotifyProductContext: input.lineNotifyProductContext,
   };

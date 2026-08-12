@@ -194,6 +194,7 @@ export const siteSettingsSchema = z.object({
   lineOaId: z.string().trim().min(2).max(80).default("@retroconsole1981"),
   lineChatPrompt: z.string().trim().min(1).max(500).default("สวัสดีครับ สนใจสอบถามสินค้า"),
   lineChannelAccessToken: z.string().trim().max(2000).optional(),
+  lineChannelSecret: z.string().trim().max(200).optional(),
   lineAdminRecipientId: z.string().trim().max(200).optional(),
   lineNotifyProductContext: z.coerce.boolean().default(false),
 });

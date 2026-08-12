@@ -83,6 +83,9 @@ export default async function AdminSettingsPage() {
             <div>
               <h3 className="text-sm font-semibold">LINE live chat</h3>
               <p className="mt-1 text-xs text-slate-500">Show a floating chat button on every page and optionally notify your LINE admin when a customer starts from a product page.</p>
+              <p className="mt-2 rounded-md border border-black/10 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                Webhook URL for LINE Console: <span className="font-semibold text-slate-900">https://www.japantoyshop.com/api/line/webhook</span>
+              </p>
             </div>
             <label className="flex items-center gap-2 text-sm">
               <input name="liveChatEnabled" type="checkbox" defaultChecked={site?.liveChatEnabled ?? true} />
@@ -105,6 +108,10 @@ export default async function AdminSettingsPage() {
             <label className="grid gap-1 text-sm font-medium">
               LINE Messaging API channel access token
               <input name="lineChannelAccessToken" type="password" placeholder={site?.lineChannelTokenCiphertext ? "Token saved - leave blank to keep current token" : "Paste long-lived channel access token"} className="h-10 rounded-md border border-black/10 px-3 font-normal" />
+            </label>
+            <label className="grid gap-1 text-sm font-medium">
+              LINE channel secret
+              <input name="lineChannelSecret" type="password" placeholder={site?.lineChannelSecretCiphertext ? "Secret saved - leave blank to keep current secret" : "Paste channel secret from Messaging API"} className="h-10 rounded-md border border-black/10 px-3 font-normal" />
             </label>
             <label className="flex items-center gap-2 text-sm">
               <input name="lineNotifyProductContext" type="checkbox" defaultChecked={site?.lineNotifyProductContext ?? false} />
