@@ -49,18 +49,121 @@ async function fetchAiImage(url: string): Promise<AiInputImage | null> {
   }
 }
 
-function extractJsonObject(text: string) {
-  const cleaned = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
-  try {
-    return JSON.parse(cleaned) as Record<string, unknown>;
-  } catch {
-    const start = cleaned.indexOf("{");
-    const end = cleaned.lastIndexOf("}");
-    if (start >= 0 && end > start) {
-      return JSON.parse(cleaned.slice(start, end + 1)) as Record<string, unknown>;
+function normalizeAiJsonText(text: string) {
+  return text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+}
+
+function findBalancedJsonObject(text: string) {
+  const start = text.indexOf("{");
+  if (start < 0) return "";
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = start; index < text.length; index++) {
+    const char = text[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === "\"") {
+        inString = false;
+      }
+      continue;
     }
-    throw new Error("AI did not return structured product data.");
+
+    if (char === "\"") {
+      inString = true;
+      continue;
+    }
+
+    if (char === "{") depth++;
+    if (char === "}") depth--;
+    if (depth === 0) return text.slice(start, index + 1);
   }
+
+  return "";
+}
+
+function parseJsonCandidate(text: string) {
+  const withoutTrailingCommas = text.replace(/,\s*([}\]])/g, "$1");
+  return JSON.parse(withoutTrailingCommas) as Record<string, unknown>;
+}
+
+function extractJsonObject(text: string) {
+  const cleaned = normalizeAiJsonText(text);
+  try {
+    return parseJsonCandidate(cleaned);
+  } catch {
+    const objectText = findBalancedJsonObject(cleaned);
+    if (objectText) {
+      return parseJsonCandidate(objectText);
+    }
+    return null;
+  }
+}
+
+function firstMatch(text: string, patterns: RegExp[]) {
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) return match[1].trim();
+  }
+  return "";
+}
+
+function textToDescriptionHtml(text: string) {
+  const cleaned = normalizeAiJsonText(text);
+  if (/<(h2|h3|h4|p|ul|ol|li|table|strong|b|br)\b/i.test(cleaned)) return cleaned;
+
+  const lines = cleaned
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/^(name|product name|ชื่อสินค้า|sku|price|ราคา|market price)\s*[:：-]/i.test(line));
+
+  const listItems = lines
+    .filter((line) => /^[-*•]\s+/.test(line))
+    .map((line) => `<li>${line.replace(/^[-*•]\s+/, "")}</li>`);
+  const paragraphs = lines
+    .filter((line) => !/^[-*•]\s+/.test(line))
+    .map((line) => `<p>${line}</p>`);
+
+  return [
+    "<h3>รายละเอียดสินค้า</h3>",
+    ...paragraphs,
+    listItems.length ? `<ul>${listItems.join("")}</ul>` : "",
+  ].join("");
+}
+
+function parsedOrFallbackProduct(generated: string, fallbackName: string) {
+  const parsed = extractJsonObject(generated);
+  if (parsed) return parsed;
+
+  const name = firstMatch(generated, [
+    /(?:product\s*name|name|ชื่อสินค้า)\s*[:：-]\s*(.+)/i,
+    /^#{1,4}\s*(.+)$/m,
+  ]);
+  const sku = firstMatch(generated, [
+    /(?:sku|รหัสสินค้า)\s*[:：-]\s*([A-Z0-9][A-Z0-9\-_ ]{1,64})/i,
+  ]);
+  const price = firstMatch(generated, [
+    /(?:market\s*price|price|ราคา(?:ตลาด)?)\s*[:：-]\s*(?:THB|฿)?\s*([\d,]+(?:\.\d+)?)/i,
+    /(?:THB|฿)\s*([\d,]+(?:\.\d+)?)/i,
+  ]);
+
+  return {
+    name: name || fallbackName,
+    sku,
+    marketPriceThb: price,
+    descriptionHtml: textToDescriptionHtml(generated),
+  };
 }
 
 function cleanSku(value: unknown, fallbackName: string) {
@@ -117,7 +220,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const generated = await generateAiText({ prompt, imageUrl: imageUrls[0], images, maxTokens: 2600 });
-    const parsed = extractJsonObject(generated);
+    const parsed = parsedOrFallbackProduct(generated, name);
     const generatedName = String(parsed.name || name || "").trim();
     const description = sanitizeProductHtml(String(parsed.descriptionHtml || generated || ""));
     const sku = await uniqueSku(cleanSku(parsed.sku, generatedName || name));
