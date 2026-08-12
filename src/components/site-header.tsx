@@ -4,21 +4,7 @@ import { Package, Search, ShoppingBag, UserRound } from "lucide-react";
 import { getCart } from "@/lib/cart";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-function parseHeaderLinks(value?: string | null) {
-  return (value || "")
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [label, ...hrefParts] = line.split("|");
-      return { label: label.trim(), href: hrefParts.join("|").trim() };
-    })
-    .filter((link) => {
-      if (!link.label || !link.href) return false;
-      return link.href.startsWith("/") || link.href.startsWith("https://") || link.href.startsWith("http://");
-    });
-}
+import { parseHeaderLinks } from "@/lib/header-links";
 
 export async function SiteHeader() {
   const [cart, session, settings] = await Promise.all([
@@ -47,7 +33,12 @@ export async function SiteHeader() {
           <Link href="/shop">Shop</Link>
           <Link href="/downloads">Downloads</Link>
           {customLinks.map((link) => (
-            <Link key={`${link.label}-${link.href}`} href={link.href}>
+            <Link
+              key={`${link.label}-${link.href}-${link.target}`}
+              href={link.href}
+              target={link.target === "_blank" ? "_blank" : undefined}
+              rel={link.target === "_blank" ? "noopener noreferrer" : undefined}
+            >
               {link.label}
             </Link>
           ))}

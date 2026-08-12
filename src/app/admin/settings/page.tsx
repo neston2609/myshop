@@ -1,4 +1,5 @@
 import { saveSiteSettingsAction } from "@/app/actions";
+import { HeaderLinksField } from "@/components/header-links-field";
 import { LogoUploadField } from "@/components/logo-upload-field";
 import { prisma } from "@/lib/prisma";
 
@@ -81,15 +82,9 @@ export default async function AdminSettingsPage() {
           <div className="grid gap-3 border-t border-black/10 pt-4">
             <div>
               <h3 className="text-sm font-semibold">Header navigation</h3>
-              <p className="mt-1 text-xs text-slate-500">Add one link per line, using: Label | URL</p>
+              <p className="mt-1 text-xs text-slate-500">Add menu links and choose whether each link opens in the same page or a new tab.</p>
             </div>
-            <textarea
-              name="headerLinks"
-              defaultValue={site?.headerLinks || ""}
-              placeholder={"About | /about\nContact | /contact\nFacebook | https://facebook.com/yourshop"}
-              rows={4}
-              className="rounded-md border border-black/10 px-3 py-2"
-            />
+            <HeaderLinksField defaultValue={site?.headerLinks} />
           </div>
           <div className="grid gap-3 border-t border-black/10 pt-4">
             <h3 className="text-sm font-semibold">Homepage hero text</h3>
