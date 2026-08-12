@@ -6,7 +6,14 @@ import { prisma } from "@/lib/prisma";
 type AiGenerateInput = {
   prompt: string;
   imageUrl?: string;
+  images?: AiInputImage[];
   maxTokens?: number;
+};
+
+export type AiInputImage = {
+  url: string;
+  mimeType: string;
+  base64?: string;
 };
 
 type AiSettingsForGeneration = {
@@ -138,10 +145,19 @@ async function generateOpenAiCompatibleText(settings: AiSettingsForGeneration, i
   const endpoint = getOpenAiCompatibleEndpoint(settings);
   if (!endpoint) throw new Error("Missing AI endpoint.");
 
-  const content = input.imageUrl
+  const imageParts = (input.images || [])
+    .slice(0, 3)
+    .map((image) => ({
+      type: "image_url",
+      image_url: {
+        url: image.base64 ? `data:${image.mimeType};base64,${image.base64}` : image.url,
+      },
+    }));
+
+  const content = imageParts.length
     ? [
         { type: "text", text: input.prompt },
-        { type: "image_url", image_url: { url: input.imageUrl } },
+        ...imageParts,
       ]
     : input.prompt;
 
@@ -173,6 +189,21 @@ async function generateOpenAiCompatibleText(settings: AiSettingsForGeneration, i
 }
 
 async function generateAnthropicText(settings: AiSettingsForGeneration, input: AiGenerateInput, apiKey: string) {
+  const content = [
+    { type: "text", text: input.prompt },
+    ...(input.images || [])
+      .filter((image) => image.base64)
+      .slice(0, 3)
+      .map((image) => ({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: image.mimeType,
+          data: image.base64,
+        },
+      })),
+  ];
+
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -184,7 +215,7 @@ async function generateAnthropicText(settings: AiSettingsForGeneration, input: A
       model: getModel(settings),
       max_tokens: input.maxTokens || 700,
       temperature: 0.4,
-      messages: [{ role: "user", content: input.prompt }],
+      messages: [{ role: "user", content }],
     }),
     cache: "no-store",
   });
@@ -200,6 +231,19 @@ async function generateAnthropicText(settings: AiSettingsForGeneration, input: A
 }
 
 async function generateGeminiText(settings: AiSettingsForGeneration, input: AiGenerateInput, apiKey: string) {
+  const parts = [
+    { text: input.prompt },
+    ...(input.images || [])
+      .filter((image) => image.base64)
+      .slice(0, 3)
+      .map((image) => ({
+        inlineData: {
+          mimeType: image.mimeType,
+          data: image.base64,
+        },
+      })),
+  ];
+
   const serviceAccount = parseGoogleServiceAccount(apiKey);
   if (serviceAccount) {
     const projectId = serviceAccount.project_id;
@@ -217,7 +261,7 @@ async function generateGeminiText(settings: AiSettingsForGeneration, input: AiGe
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: input.prompt }] }],
+            contents: [{ role: "user", parts }],
             generationConfig: {
               maxOutputTokens: input.maxTokens || 700,
             },
@@ -249,7 +293,7 @@ async function generateGeminiText(settings: AiSettingsForGeneration, input: AiGe
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: input.prompt }] }],
+      contents: [{ role: "user", parts }],
       generationConfig: {
         temperature: 0.4,
         maxOutputTokens: input.maxTokens || 700,
