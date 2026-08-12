@@ -45,8 +45,6 @@ export async function SiteHeader() {
         </Link>
         <nav className="hidden items-center gap-6 text-sm text-[var(--muted)] md:flex">
           <Link href="/shop">Shop</Link>
-          <Link href="/shop?sort=new">New arrivals</Link>
-          <Link href="/shop?stock=in">In stock</Link>
           <Link href="/downloads">Downloads</Link>
           {customLinks.map((link) => (
             <Link key={`${link.label}-${link.href}`} href={link.href}>
