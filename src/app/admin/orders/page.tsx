@@ -3,10 +3,10 @@ import Link from "next/link";
 import { markOrderPaidAction, updateOrderTrackingAction } from "@/app/actions";
 import { money } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
-import { shippingCarriers } from "@/lib/shipping-carriers";
+import { findShippingCarrier, shippingCarriers, trackingHref } from "@/lib/shipping-carriers";
 
 type AdminOrdersPageProps = {
-  searchParams: Promise<{ message?: string; page?: string }>;
+  searchParams: Promise<{ editTracking?: string; message?: string; page?: string }>;
 };
 
 const ordersPerPage = 6;
@@ -15,6 +15,13 @@ function pageLink(page: number, message?: string) {
   const params = new URLSearchParams();
   params.set("page", String(page));
   if (message) params.set("message", message);
+  return `/admin/orders?${params.toString()}`;
+}
+
+function trackingEditLink(page: number, orderId: string) {
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  params.set("editTracking", orderId);
   return `/admin/orders?${params.toString()}`;
 }
 
@@ -59,6 +66,9 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
             order.customerPhone,
           ].filter(Boolean).join(" ");
           const canUpdateTracking = ["PAID", "PROCESSING", "SHIPPED", "COMPLETED"].includes(order.status);
+          const isEditingTracking = params.editTracking === order.id;
+          const carrier = findShippingCarrier(order.trackingCarrierCode);
+          const trackingUrl = trackingHref(order.trackingCarrierCode, order.trackingNumber);
           return (
             <article key={order.id} className="py-4">
               <div className="grid gap-2 text-sm md:grid-cols-[1fr_150px_120px_100px]">
@@ -97,7 +107,24 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
                   ) : null}
                 </div>
               ) : null}
-              {canUpdateTracking ? (
+              {order.trackingNumber && !isEditingTracking ? (
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm">
+                  <div className="grid gap-1 text-emerald-950">
+                    <p className="font-semibold">Tracking saved</p>
+                    <p>ขนส่ง: {order.trackingCarrierName || carrier?.name || order.trackingCarrierCode || "-"}</p>
+                    {trackingUrl ? (
+                      <a href={trackingUrl} target="_blank" rel="noreferrer" className="font-semibold text-[#0f766e] underline-offset-4 hover:underline">
+                        Tracking: {order.trackingNumber}
+                      </a>
+                    ) : (
+                      <p>Tracking: {order.trackingNumber}</p>
+                    )}
+                  </div>
+                  <Link href={trackingEditLink(safePage, order.id)} className="inline-flex h-10 items-center rounded-md border border-emerald-200 bg-white px-4 font-semibold text-emerald-900 transition hover:bg-emerald-100 active:translate-y-px">
+                    Edit
+                  </Link>
+                </div>
+              ) : canUpdateTracking ? (
                 <form action={updateOrderTrackingAction} className="mt-4 grid gap-3 rounded-md border border-black/10 bg-slate-50 p-3 md:grid-cols-[220px_1fr_auto] md:items-end">
                   <input type="hidden" name="orderId" value={order.id} />
                   <label className="grid gap-1.5 text-sm font-semibold text-slate-800">

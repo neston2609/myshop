@@ -8,8 +8,30 @@ import { money } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
 type AdminProductsPageProps = {
-  searchParams: Promise<{ message?: string; category?: string }>;
+  searchParams: Promise<{ message?: string; category?: string; duplicate?: string }>;
 };
+
+function adminProductsHref(input: { category?: string; duplicate?: string }) {
+  const params = new URLSearchParams();
+  if (input.category) params.set("category", input.category);
+  if (input.duplicate) params.set("duplicate", input.duplicate);
+  const query = params.toString();
+  return `/admin/products${query ? `?${query}` : ""}`;
+}
+
+async function duplicateSku(baseSku?: string) {
+  if (!baseSku) return "";
+  const base = `${baseSku}-COPY`;
+  let candidate = base;
+  let suffix = 2;
+
+  while (await prisma.product.findUnique({ where: { sku: candidate }, select: { id: true } })) {
+    candidate = `${base}-${suffix}`;
+    suffix++;
+  }
+
+  return candidate;
+}
 
 export default async function AdminProductsPage({ searchParams }: AdminProductsPageProps) {
   const params = await searchParams;
@@ -21,14 +43,23 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
   }[params.message || ""];
   const isError = params.message === "product-not-found" || params.message === "sku-taken";
   const selectedCategory = params.category || "";
-  const [products, categories] = await Promise.all([
+  const [products, categories, duplicateProduct] = await Promise.all([
     prisma.product.findMany({
       where: selectedCategory ? { category: { slug: selectedCategory } } : undefined,
       include: { category: true, media: { orderBy: { sortOrder: "asc" } } },
       orderBy: { createdAt: "desc" },
     }),
     prisma.category.findMany({ orderBy: { name: "asc" } }),
+    params.duplicate
+      ? prisma.product.findUnique({
+          where: { id: params.duplicate },
+          include: { media: { orderBy: { sortOrder: "asc" } } },
+        })
+      : null,
   ]);
+  const duplicateImageUrls = duplicateProduct?.media.filter((media) => media.type === "IMAGE").map((media) => media.url) || [];
+  const duplicateYoutubeUrl = duplicateProduct?.media.find((media) => media.type === "YOUTUBE")?.url || "";
+  const copiedSku = await duplicateSku(duplicateProduct?.sku);
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
@@ -100,31 +131,48 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                     <label className="flex items-center gap-2 text-sm"><input name="active" type="checkbox" defaultChecked={product.active} /> Active</label>
                     <button className="h-10 rounded-md bg-[#17201c] font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#223329] active:translate-y-0">Save changes</button>
                   </form>
-                  <form action={deleteProductAction}>
-                    <input type="hidden" name="id" value={product.id} />
-                    <button className="h-10 rounded-md border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-700 transition hover:-translate-y-0.5 hover:bg-red-100 active:translate-y-0">Delete product</button>
-                  </form>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href={adminProductsHref({ category: selectedCategory, duplicate: product.id })} className="inline-flex h-10 items-center justify-center rounded-md border border-black/10 bg-white px-4 text-sm font-semibold text-slate-800 transition hover:-translate-y-0.5 hover:bg-slate-50 active:translate-y-0">
+                      Duplicate
+                    </Link>
+                    <form action={deleteProductAction}>
+                      <input type="hidden" name="id" value={product.id} />
+                      <button className="h-10 rounded-md border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-700 transition hover:-translate-y-0.5 hover:bg-red-100 active:translate-y-0">Delete product</button>
+                    </form>
+                  </div>
                 </div>
               </details>
             );
           })}
         </div>
       </div>
-      <form action={saveProductAction} className="grid h-fit gap-3 rounded-lg border border-black/10 bg-white p-5">
-        <h2 className="font-semibold">Add product</h2>
-        <input name="name" placeholder="Name" required className="h-10 rounded-md border border-black/10 px-3" />
-        <RichHtmlEditor name="description" placeholder="Product details..." />
-        <input name="sku" placeholder="SKU" required className="h-10 rounded-md border border-black/10 px-3" />
-        <input name="price" type="number" step="0.01" placeholder="Price" required className="h-10 rounded-md border border-black/10 px-3" />
-        <input name="stock" type="number" placeholder="Stock" required className="h-10 rounded-md border border-black/10 px-3" />
-        <select name="categoryId" required className="h-10 rounded-md border border-black/10 px-3">
+      <form key={duplicateProduct?.id || "new-product"} action={saveProductAction} className="grid h-fit gap-3 rounded-lg border border-black/10 bg-white p-5">
+        <div>
+          <h2 className="font-semibold">{duplicateProduct ? "Add product from duplicate" : "Add product"}</h2>
+          {duplicateProduct ? (
+            <p className="mt-1 text-sm text-slate-500">
+              Review copied details from {duplicateProduct.name} before saving as a new product.
+            </p>
+          ) : null}
+        </div>
+        <input name="name" defaultValue={duplicateProduct ? `${duplicateProduct.name} Copy` : ""} placeholder="Name" required className="h-10 rounded-md border border-black/10 px-3" />
+        <RichHtmlEditor name="description" defaultValue={duplicateProduct?.description || ""} placeholder="Product details..." />
+        <input name="sku" defaultValue={copiedSku} placeholder="SKU" required className="h-10 rounded-md border border-black/10 px-3" />
+        <input name="price" defaultValue={duplicateProduct?.price.toString() || ""} type="number" step="0.01" placeholder="Price" required className="h-10 rounded-md border border-black/10 px-3" />
+        <input name="stock" defaultValue={duplicateProduct?.stock ?? ""} type="number" placeholder="Stock" required className="h-10 rounded-md border border-black/10 px-3" />
+        <select name="categoryId" defaultValue={duplicateProduct?.categoryId || categories[0]?.id} required className="h-10 rounded-md border border-black/10 px-3">
           {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
         </select>
-        <MultiImageUploadField name="imageUrls" label="Product images" />
+        <MultiImageUploadField name="imageUrls" label="Product images" defaultValues={duplicateImageUrls} />
         <AiDescriptionButton />
-        <input name="youtubeUrl" placeholder="YouTube URL" className="h-10 rounded-md border border-black/10 px-3" />
-        <label className="flex items-center gap-2 text-sm"><input name="active" type="checkbox" defaultChecked /> Active</label>
+        <input name="youtubeUrl" defaultValue={duplicateYoutubeUrl} placeholder="YouTube URL" className="h-10 rounded-md border border-black/10 px-3" />
+        <label className="flex items-center gap-2 text-sm"><input name="active" type="checkbox" defaultChecked={duplicateProduct?.active ?? true} /> Active</label>
         <button className="h-10 rounded-md bg-[#17201c] font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#223329] active:translate-y-0">Save product</button>
+        {duplicateProduct ? (
+          <Link href={adminProductsHref({ category: selectedCategory })} className="text-center text-sm font-semibold text-slate-500">
+            Clear duplicate
+          </Link>
+        ) : null}
       </form>
     </div>
   );
