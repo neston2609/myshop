@@ -265,6 +265,10 @@ model SiteSettings {
   featureTwoBody              String   @default("Hashed passwords, signed sessions, validation, and encrypted secrets.")
   featureThreeTitle           String   @default("AI-ready operations")
   featureThreeBody            String   @default("Choose providers and models for descriptions, SEO text, and assistant features.")
+  shopDescriptionEyebrow      String?
+  shopDescriptionTitle        String?
+  shopDescriptionBody         String?
+  shopDescriptionFaqs         String   @default("")
   footerText                  String   @default("")
   supportEmail                String?
   orderNotificationEmail      String?
