@@ -166,8 +166,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
         </nav>
 
         <section className="rounded-lg border border-black/10 bg-white p-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#0f766e]">ของเล่นญี่ปุ่นและอาร์ตทอย</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-950 md:text-4xl">{category.name}</h1>
+          <h1 className="text-3xl font-semibold text-slate-950 md:text-4xl">{category.name}</h1>
           <p className="mt-4 max-w-3xl leading-7 text-slate-600">{description}</p>
           {category.subCategories.length ? (
             <div className="mt-5 border-t border-black/10 pt-5">
@@ -192,14 +191,6 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
               {selectedSubCategory?.description ? <p className="mt-3 text-sm leading-6 text-slate-500">{selectedSubCategory.description}</p> : null}
             </div>
           ) : null}
-          <div className="mt-5 flex flex-wrap gap-2 text-sm">
-            <Link href="/shop" className="rounded-md border border-black/10 bg-slate-50 px-4 py-2 font-semibold text-slate-700">
-              ดูสินค้าทั้งหมด
-            </Link>
-            <Link href={`/shop?q=${encodeURIComponent(category.name)}`} className="rounded-md bg-[#17201c] px-4 py-2 font-semibold text-white">
-              ค้นหา {category.name}
-            </Link>
-          </div>
         </section>
 
         <section className="mt-8">
