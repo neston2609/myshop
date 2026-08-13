@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpenText, Boxes, CreditCard, Download, LayoutDashboard, Mail, PackagePlus, ReceiptText, Settings, Truck, Users } from "lucide-react";
+import { BookOpenText, Boxes, CreditCard, Download, LayoutDashboard, Mail, MessageCircle, PackagePlus, ReceiptText, Settings, Truck, Users } from "lucide-react";
 
 const items = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -10,6 +10,7 @@ const items = [
   { href: "/admin/shipping", label: "Shipping", icon: Truck },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
   { href: "/admin/downloads", label: "Downloads", icon: Download },
+  { href: "/admin/live-chat", label: "Live Chat", icon: MessageCircle },
   { href: "/admin/shop-description", label: "Shop Description", icon: BookOpenText },
   { href: "/admin/settings", label: "Settings", icon: Settings },
   { href: "/admin/settings/smtp", label: "SMTP", icon: Mail },

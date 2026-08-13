@@ -13,6 +13,7 @@ export type DownloadEntry = {
   modifiedAt?: Date | number | null;
   path: string;
   thumb?: string;
+  thumbSource?: "folder" | "cover";
 };
 
 type Ops = {
@@ -119,12 +120,16 @@ async function withClient<T>(source: DownloadSource, fn: (ops: Ops) => Promise<T
   throw new Error(`Unsupported download protocol: ${source.protocol}`);
 }
 
+function normalizeRemotePath(value: string) {
+  return String(value || "").replace(/\\/g, "/");
+}
+
 export function safeResolve(rootPath: string, subPath: string) {
-  const root = (rootPath || "/").replace(/\/+$/, "") || "/";
-  const cleaned = path.posix.normalize(`/${String(subPath || "")}`).replace(/^\/+/, "");
+  const root = normalizeRemotePath(rootPath || "/").replace(/\/+$/, "") || "/";
+  const cleaned = path.posix.normalize(`/${normalizeRemotePath(String(subPath || ""))}`).replace(/^\/+/, "");
   if (cleaned.split("/").some((segment) => segment === "..")) throw new Error("Invalid path.");
   const full = path.posix.join(root, cleaned);
-  if (!(full === root || full.startsWith(`${root}/`))) throw new Error("Invalid path.");
+  if (!(root === "/" || full === root || full.startsWith(`${root}/`))) throw new Error("Invalid path.");
   return full;
 }
 
@@ -142,12 +147,40 @@ function isHidden(name: string, rules: RegExp[]) {
   return name.startsWith(".") || rules.some((rule) => rule.test(name));
 }
 
+function imageExtension(name: string) {
+  return /\.(jpe?g|png|webp|gif)$/i.test(name);
+}
+
+function folderCoverKey(name: string) {
+  const matches = [...name.matchAll(/\[([^\[\]]+)\]/g)];
+  return matches.at(-1)?.[1]?.trim().toLowerCase() || "";
+}
+
+async function coverMap(ops: Ops, coverPath?: string | null) {
+  if (!coverPath) return new Map<string, string>();
+  try {
+    const coverRoot = safeResolve(coverPath, "");
+    const entries = await ops.list(coverRoot);
+    const covers = new Map<string, string>();
+    for (const entry of entries) {
+      if (entry.type !== "file" || !imageExtension(entry.name)) continue;
+      const key = path.posix.basename(entry.name, path.posix.extname(entry.name)).trim().toLowerCase();
+      if (!key || covers.has(key)) continue;
+      covers.set(key, entry.name);
+    }
+    return covers;
+  } catch {
+    return new Map<string, string>();
+  }
+}
+
 export async function listDownloadEntries(category: CategoryWithSource, subPath: string) {
   if (!category.source) throw new Error("This download category is not mapped to a source.");
   const rules = await hideRegexes();
   return withClient(category.source, async (ops) => {
     const dir = safeResolve(category.remotePath, subPath);
     const entries = await ops.list(dir);
+    const covers = await coverMap(ops, category.coverPath);
     const cleanSub = String(subPath || "").replace(/^\/+|\/+$/g, "");
     const out: DownloadEntry[] = [];
 
@@ -157,10 +190,21 @@ export async function listDownloadEntries(category: CategoryWithSource, subPath:
         path: cleanSub ? `${cleanSub}/${entry.name}` : entry.name,
       };
       if (entry.type === "dir") {
+        const key = folderCoverKey(entry.name);
+        const coverFile = key ? covers.get(key) : "";
+        if (coverFile) {
+          shaped.thumb = coverFile;
+          shaped.thumbSource = "cover";
+          out.push(shaped);
+          continue;
+        }
         try {
           const thumb = path.posix.join(dir, entry.name, "folder.jpg");
           const stat = await ops.stat(thumb);
-          if (!stat.isDirectory) shaped.thumb = `${shaped.path}/folder.jpg`;
+          if (!stat.isDirectory) {
+            shaped.thumb = `${shaped.path}/folder.jpg`;
+            shaped.thumbSource = "folder";
+          }
         } catch {
           // Folders without folder.jpg simply use the default icon.
         }
@@ -195,10 +239,12 @@ export async function openDownloadStream(category: CategoryWithSource, subPath: 
   return { filename, stream, started };
 }
 
-export async function openInlineImageStream(category: CategoryWithSource, subPath: string) {
+export async function openInlineImageStream(category: CategoryWithSource, subPath: string, options?: { source?: "folder" | "cover" }) {
   if (!/\.(jpe?g|png|webp|gif)$/i.test(subPath || "")) throw new Error("Not an image.");
   if (!category.source) throw new Error("This download category is not mapped to a source.");
-  const full = safeResolve(category.remotePath, subPath);
+  const root = options?.source === "cover" ? category.coverPath : category.remotePath;
+  if (!root) throw new Error("This download category is not mapped to an image path.");
+  const full = safeResolve(root, subPath);
   const stream = new PassThrough();
   const started = withClient(category.source, async (ops) => {
     await ops.streamTo(full, stream);

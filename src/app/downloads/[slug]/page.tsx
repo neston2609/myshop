@@ -66,6 +66,7 @@ export default async function DownloadCategoryPage({ params, searchParams }: Dow
     path: entry.path,
     size: entry.size,
     thumb: entry.thumb,
+    thumbSource: entry.thumbSource,
     type: entry.type,
   }));
 
@@ -105,6 +106,7 @@ export default async function DownloadCategoryPage({ params, searchParams }: Dow
             entries={listEntries}
             initialPage={currentPage}
             initialPerPage={perPage}
+            hasCoverMapping={Boolean(category.coverPath)}
             slug={slug}
           />
         ) : null}

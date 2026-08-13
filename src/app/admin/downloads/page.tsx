@@ -82,6 +82,7 @@ export default async function AdminDownloadsPage() {
                     imageUrl={category.imageUrl || ""}
                     sourceId={category.sourceId || ""}
                     remotePath={category.remotePath}
+                    coverPath={category.coverPath || ""}
                     position={category.position.toString()}
                     enabled={category.enabled}
                   />
@@ -201,6 +202,7 @@ function CategoryForm({
   imageUrl = "",
   sourceId = "",
   remotePath = "",
+  coverPath = "",
   position = "0",
   enabled = true,
 }: {
@@ -212,6 +214,7 @@ function CategoryForm({
   imageUrl?: string;
   sourceId?: string;
   remotePath?: string;
+  coverPath?: string;
   position?: string;
   enabled?: boolean;
 }) {
@@ -230,6 +233,11 @@ function CategoryForm({
         ))}
       </select>
       <input name="remotePath" defaultValue={remotePath} placeholder="/remote/path/category" required className="h-10 rounded-md border border-black/10 px-3" />
+      <label className="grid gap-1 text-sm font-semibold text-slate-700">
+        <span>Cover path</span>
+        <input name="coverPath" defaultValue={coverPath} placeholder="/remote/path/cover/images (optional)" className="h-10 rounded-md border border-black/10 px-3 font-normal text-slate-900" />
+        <span className="text-xs font-normal text-slate-500">Used to match folder names like Folder Name [xxx01] with cover files named xxx01.jpg/png/webp/gif.</span>
+      </label>
       <input name="position" defaultValue={position} type="number" className="h-10 rounded-md border border-black/10 px-3" />
       <label className="flex items-center gap-2 text-sm"><input name="enabled" type="checkbox" defaultChecked={enabled} /> Enabled</label>
       <button disabled={sources.length === 0} className="h-10 rounded-md bg-[#17201c] font-semibold text-white disabled:opacity-40">Save mapping</button>

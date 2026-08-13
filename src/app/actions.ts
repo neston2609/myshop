@@ -994,6 +994,7 @@ export async function saveDownloadCategoryAction(formData: FormData) {
     imageUrl: input.imageUrl || null,
     sourceId: input.sourceId,
     remotePath: input.remotePath,
+    coverPath: input.coverPath || null,
     position: input.position,
     enabled: input.enabled,
   };

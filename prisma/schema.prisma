@@ -431,6 +431,7 @@ model DownloadCategory {
   sourceId    String?
   source      DownloadSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
   remotePath  String
+  coverPath   String?
   enabled     Boolean         @default(true)
   position    Int             @default(0)
   createdAt   DateTime        @default(now())

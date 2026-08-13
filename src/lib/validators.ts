@@ -262,6 +262,7 @@ export const downloadCategorySchema = z.object({
   imageUrl: uploadedImageSchema.optional(),
   sourceId: z.string().min(1),
   remotePath: z.string().trim().min(1).max(800),
+  coverPath: z.string().trim().max(800).optional(),
   position: z.coerce.number().int().default(0),
   enabled: z.coerce.boolean().default(true),
 });

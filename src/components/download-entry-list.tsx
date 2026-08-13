@@ -11,12 +11,14 @@ export type DownloadListEntry = {
   size?: number | null;
   path: string;
   thumb?: string;
+  thumbSource?: "folder" | "cover";
 };
 
 type DownloadEntryListProps = {
   entries: DownloadListEntry[];
   initialPage: number;
   initialPerPage: number;
+  hasCoverMapping?: boolean;
   slug: string;
 };
 
@@ -49,7 +51,7 @@ function paginationPages(currentPage: number, totalPages: number) {
   return [...pages].filter((page) => page >= 1 && page <= totalPages).sort((a, b) => a - b);
 }
 
-export function DownloadEntryList({ entries, initialPage, initialPerPage, slug }: DownloadEntryListProps) {
+export function DownloadEntryList({ entries, initialPage, initialPerPage, hasCoverMapping = false, slug }: DownloadEntryListProps) {
   const [search, setSearch] = useState("");
   const [perPage, setPerPage] = useState(pageSizeOptions.includes(initialPerPage) ? initialPerPage : pageSizeOptions[0]);
   const [page, setPage] = useState(Math.max(1, initialPage));
@@ -105,33 +107,39 @@ export function DownloadEntryList({ entries, initialPage, initialPerPage, slug }
       </div>
 
       <div className="mt-5 overflow-hidden rounded-lg border border-black/10 bg-white">
-        {paginatedEntries.map((entry) => (
-          <div key={entry.path} className="grid gap-3 border-b border-black/10 p-4 last:border-b-0 md:grid-cols-[1fr_120px_140px] md:items-center">
-            <div className="flex min-w-0 items-center gap-3">
-              {entry.type === "dir" ? (
-                entry.thumb ? (
-                  <Image src={`/api/downloads/${slug}/thumb?path=${encodeURIComponent(entry.thumb)}`} alt="" width={64} height={64} className="h-16 w-16 shrink-0 rounded-md border border-black/10 object-cover" />
+        {paginatedEntries.map((entry) => {
+          const imageSizeClass = hasCoverMapping && entry.type === "dir" ? "h-28 w-28" : "h-16 w-16";
+          const iconSize = hasCoverMapping && entry.type === "dir" ? 58 : 28;
+          const thumbParams = new URLSearchParams({ path: entry.thumb || "" });
+          if (entry.thumbSource === "cover") thumbParams.set("source", "cover");
+          return (
+            <div key={entry.path} className="grid gap-3 border-b border-black/10 p-4 last:border-b-0 md:grid-cols-[1fr_120px_140px] md:items-center">
+              <div className="flex min-w-0 items-center gap-3">
+                {entry.type === "dir" ? (
+                  entry.thumb ? (
+                    <Image src={`/api/downloads/${slug}/thumb?${thumbParams.toString()}`} alt="" width={112} height={112} className={`${imageSizeClass} shrink-0 rounded-md border border-black/10 object-cover`} />
+                  ) : (
+                    <Folder className="shrink-0 text-[#0f766e]" size={iconSize} />
+                  )
                 ) : (
-                  <Folder className="shrink-0 text-[#0f766e]" size={28} />
-                )
+                  <FileText className="shrink-0 text-slate-500" size={26} />
+                )}
+                <span className="truncate font-medium">{entry.name}{entry.type === "dir" ? "/" : ""}</span>
+              </div>
+              <span className="text-sm text-slate-500">{entry.type === "file" ? formatBytes(entry.size) : ""}</span>
+              {entry.type === "dir" ? (
+                <Link href={downloadHref(slug, { path: entry.path, perPage })} className="inline-flex h-10 items-center justify-center rounded-md border border-black/10 bg-white px-4 text-sm font-semibold transition hover:bg-slate-50">
+                  Open
+                </Link>
               ) : (
-                <FileText className="shrink-0 text-slate-500" size={26} />
+                <a href={`/api/downloads/${slug}/file?path=${encodeURIComponent(entry.path)}`} className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#0f766e] px-4 text-sm font-semibold text-white transition hover:bg-[#115e59]">
+                  <Download size={16} />
+                  Download
+                </a>
               )}
-              <span className="truncate font-medium">{entry.name}{entry.type === "dir" ? "/" : ""}</span>
             </div>
-            <span className="text-sm text-slate-500">{entry.type === "file" ? formatBytes(entry.size) : ""}</span>
-            {entry.type === "dir" ? (
-              <Link href={downloadHref(slug, { path: entry.path, perPage })} className="inline-flex h-10 items-center justify-center rounded-md border border-black/10 bg-white px-4 text-sm font-semibold transition hover:bg-slate-50">
-                Open
-              </Link>
-            ) : (
-              <a href={`/api/downloads/${slug}/file?path=${encodeURIComponent(entry.path)}`} className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-[#0f766e] px-4 text-sm font-semibold text-white transition hover:bg-[#115e59]">
-                <Download size={16} />
-                Download
-              </a>
-            )}
-          </div>
-        ))}
+          );
+        })}
         {entries.length === 0 ? <p className="p-6 text-slate-600">This folder is empty.</p> : null}
         {entries.length > 0 && filteredEntries.length === 0 ? <p className="p-6 text-slate-600">No downloads match your search.</p> : null}
       </div>
