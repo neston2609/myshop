@@ -17,7 +17,7 @@ export default async function DownloadsPage() {
       <main className="container-shell py-10">
         <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
           <h1 className="text-3xl font-semibold">Downloads</h1>
-          <Link href="/wii-game-selector" className="inline-flex h-10 items-center justify-center rounded-md bg-[var(--accent)] px-4 text-sm font-semibold text-white">
+          <Link href="/wii-game-selector" className="inline-flex h-10 items-center justify-center rounded-md border border-blue-600 bg-white px-4 text-sm font-semibold text-blue-600">
             Nintendo Wii Game Selector
           </Link>
         </div>

@@ -2,8 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useMemo, useState } from "react";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Download, Folder } from "lucide-react";
 import type { WiiGameSelectorEntry } from "@/lib/download-sources";
 
@@ -118,13 +117,13 @@ export function WiiGameSelector({
     }
   }
 
-  function renderDownloadButton() {
-    if (!isValid) return null;
+  function renderDownloadButton(alwaysVisible = false) {
+    if (!alwaysVisible && !isValid) return null;
     return (
       <button
         type="button"
         onClick={downloadSelection}
-        disabled={downloading}
+        disabled={downloading || !isValid}
         className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
       >
         <Download size={17} />
@@ -135,20 +134,31 @@ export function WiiGameSelector({
 
   return (
     <div className="grid gap-5">
-      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="grid gap-1">
-            <p className="text-sm font-semibold text-[var(--muted)]">เลือกได้ตั้งแต่ {minSizeGb} GB ถึง {maxSizeGb} GB</p>
-            <h2 className="text-2xl font-semibold">เลือกแล้ว {formatBytes(selectedBytes)}</h2>
+      <section className="sticky top-3 z-30 rounded-lg border border-[var(--border)] bg-[var(--surface)]/95 p-4 shadow-xl backdrop-blur">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="grid gap-3 sm:grid-cols-4">
+            <div className="rounded-md border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
+              <p className="text-xs font-semibold uppercase text-[var(--muted)]">จำนวนไฟล์</p>
+              <p className="text-xl font-semibold">{selectedCodes.length}</p>
+            </div>
+            <div className="rounded-md border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
+              <p className="text-xs font-semibold uppercase text-[var(--muted)]">Min Size</p>
+              <p className="text-xl font-semibold">{minSizeGb} GB</p>
+            </div>
+            <div className="rounded-md border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
+              <p className="text-xs font-semibold uppercase text-[var(--muted)]">Max Size</p>
+              <p className="text-xl font-semibold">{maxSizeGb} GB</p>
+            </div>
+            <div className="rounded-md border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2">
+              <p className="text-xs font-semibold uppercase text-[var(--muted)]">Current Size</p>
+              <p className="text-xl font-semibold">{formatBytes(selectedBytes)}</p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <p className={`text-sm ${isOver ? "text-red-600" : "text-[var(--muted)]"}`}>
               {isOver ? `เกินกำหนด ${formatBytes(selectedBytes - maxSizeBytes)}` : needBytes > 0 ? `ต้องเลือกเพิ่มอย่างน้อย ${formatBytes(needBytes)}` : `เลือกเพิ่มได้อีก ${formatBytes(remainingBytes)}`}
             </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-md border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm font-semibold">
-              {selectedCodes.length} games selected
-            </span>
-            {renderDownloadButton()}
+            {renderDownloadButton(true)}
           </div>
         </div>
         {message ? <p className="mt-4 rounded-md bg-[var(--accent-soft)] p-3 text-sm font-semibold text-[var(--text)]">{message}</p> : null}
@@ -167,7 +177,7 @@ export function WiiGameSelector({
       ) : null}
 
       {!loadingList && !loadError ? (
-      <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)]">
         <div className="hidden grid-cols-[86px_minmax(280px,1fr)_120px_140px] border-b border-[var(--border)] bg-[var(--surface-soft)] px-4 py-3 text-sm font-semibold text-[var(--muted)] md:grid">
           <span>Cover</span>
           <span>Folder</span>
@@ -183,15 +193,26 @@ export function WiiGameSelector({
               key={entry.path}
               className={`grid cursor-pointer gap-3 border-b border-[var(--border)] px-4 py-4 last:border-b-0 md:grid-cols-[86px_minmax(280px,1fr)_120px_140px] md:items-center ${checked ? "bg-[var(--accent-soft)]" : ""}`}
             >
-              <span>
+              <span className="group relative inline-flex w-fit">
                 {entry.coverFile ? (
-                  <img
-                    src={`/api/downloads/${categorySlug}/thumb?${thumbParams.toString()}`}
-                    alt=""
-                    width={64}
-                    height={64}
-                    className="aspect-square h-16 w-16 rounded-md border border-[var(--border)] object-cover"
-                  />
+                  <>
+                    <img
+                      src={`/api/downloads/${categorySlug}/thumb?${thumbParams.toString()}`}
+                      alt=""
+                      width={64}
+                      height={64}
+                      className="aspect-square h-16 w-16 rounded-md border border-[var(--border)] object-cover"
+                    />
+                    <span className="pointer-events-none fixed left-1/2 top-24 z-50 hidden -translate-x-1/2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 shadow-2xl group-hover:block">
+                      <img
+                        src={`/api/downloads/${categorySlug}/thumb?${thumbParams.toString()}`}
+                        alt=""
+                        width={320}
+                        height={320}
+                        className="aspect-square h-80 w-80 rounded-md object-cover"
+                      />
+                    </span>
+                  </>
                 ) : (
                   <span className="flex h-16 w-16 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-soft)]">
                     <Folder size={32} className="text-[var(--muted)]" />
