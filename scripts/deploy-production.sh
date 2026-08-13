@@ -43,7 +43,8 @@ set -a
 # shellcheck disable=SC1091
 source .env
 set +a
-pg_dump --format=custom --file="$backup_dir/myshop_db_${timestamp}_${current_sha:0:8}.dump" "$DATABASE_URL"
+backup_database_url="$(DATABASE_URL="$DATABASE_URL" node -e 'const url = new URL(process.env.DATABASE_URL); url.searchParams.delete("schema"); process.stdout.write(url.toString())')"
+pg_dump --format=custom --file="$backup_dir/myshop_db_${timestamp}_${current_sha:0:8}.dump" "$backup_database_url"
 
 git merge --ff-only "$target_sha"
 npm ci
