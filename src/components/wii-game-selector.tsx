@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useState } from "react";
-import { Download, Folder } from "lucide-react";
+import { Download, Eye, Folder, RotateCcw, X } from "lucide-react";
 import type { WiiGameSelectorEntry } from "@/lib/download-sources";
 
 type WiiGameSelectorProps = {
@@ -53,6 +53,7 @@ export function WiiGameSelector({
   const [loadError, setLoadError] = useState("");
   const [sizeError, setSizeError] = useState("");
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [message, setMessage] = useState("");
   const entryMap = useMemo(() => new Map(gameEntries.map((entry) => [entry.code, entry])), [gameEntries]);
@@ -124,6 +125,12 @@ export function WiiGameSelector({
     setSelectedCodes((current) => checked ? [...current, code] : current.filter((item) => item !== code));
   }
 
+  function clearSelection() {
+    setMessage("");
+    setPreviewOpen(false);
+    setSelectedCodes([]);
+  }
+
   async function downloadSelection() {
     setDownloading(true);
     setMessage("");
@@ -190,15 +197,75 @@ export function WiiGameSelector({
               <p className="text-xl font-semibold">{formatBytes(selectedBytes)}</p>
             </div>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
             <p className={`text-sm ${isOver ? "text-red-600" : "text-[var(--muted)]"}`}>
               {!selectedSizesReady ? "กำลังโหลดขนาดไฟล์ที่เลือก..." : isOver ? `เกินกำหนด ${formatBytes(selectedBytes - maxSizeBytes)}` : needBytes > 0 ? `ต้องเลือกเพิ่มอย่างน้อย ${formatBytes(needBytes)}` : `เลือกเพิ่มได้อีก ${formatBytes(remainingBytes)}`}
             </p>
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(true)}
+              disabled={selectedCodes.length === 0}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-raised)] px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Eye size={17} />
+              Preview
+            </button>
+            <button
+              type="button"
+              onClick={clearSelection}
+              disabled={selectedCodes.length === 0}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-raised)] px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RotateCcw size={17} />
+              Clear
+            </button>
             {renderDownloadButton(true)}
           </div>
         </div>
         {message ? <p className="mt-4 rounded-md bg-[var(--accent-soft)] p-3 text-sm font-semibold text-[var(--text)]">{message}</p> : null}
       </section>
+
+      {previewOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4">
+          <section className="grid max-h-[82vh] w-full max-w-2xl gap-4 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-semibold">Selected Games</h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  {selectedCodes.length} games / {formatBytes(selectedBytes)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(false)}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-raised)]"
+                aria-label="Close preview"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="max-h-[54vh] overflow-auto rounded-md border border-[var(--border)]">
+              {selectedEntries.map((entry, index) => (
+                <div key={entry.code} className="grid gap-2 border-b border-[var(--border)] px-4 py-3 text-sm last:border-b-0 sm:grid-cols-[42px_1fr_110px] sm:items-center">
+                  <span className="font-semibold text-[var(--muted)]">{index + 1}</span>
+                  <span className="font-semibold">{entry.name}</span>
+                  <span className="text-[var(--muted)] sm:text-right">{entry.code}</span>
+                </div>
+              ))}
+              {selectedEntries.length === 0 ? <p className="p-4 text-[var(--muted)]">ยังไม่ได้เลือกเกม</p> : null}
+            </div>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(false)}
+                className="inline-flex h-11 items-center justify-center rounded-md bg-[var(--accent)] px-5 text-sm font-semibold text-white"
+              >
+                Close
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {loadingList ? (
         <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 text-[var(--muted)]">
