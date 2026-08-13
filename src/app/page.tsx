@@ -64,7 +64,14 @@ export default async function Home() {
     prisma.category.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
-      include: { _count: { select: { products: true } } },
+      include: {
+        subCategories: {
+          where: { active: true },
+          orderBy: { name: "asc" },
+          include: { _count: { select: { products: true } } },
+        },
+        _count: { select: { products: true } },
+      },
     }),
     prisma.siteSettings.findFirst(),
     getSession(),
@@ -138,16 +145,28 @@ export default async function Home() {
                     View all
                   </Link>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid gap-2">
                   {categories.map((category) => (
-                    <Link
-                      key={category.id}
-                      href={category.slug ? `/categories/${category.slug}` : "/shop"}
-                      className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)]"
-                    >
-                      {category.name}
-                      <span className="text-xs font-normal text-[var(--muted)]">{category._count.products}</span>
-                    </Link>
+                    <div key={category.id} className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={category.slug ? `/categories/${category.slug}` : "/shop"}
+                        className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)]"
+                      >
+                        {category.name}
+                        <span className="text-xs font-normal text-[var(--muted)]">{category._count.products}</span>
+                      </Link>
+                      {category.subCategories.map((subCategory) => (
+                        <Link
+                          key={subCategory.id}
+                          href={`/categories/${category.slug}?sub=${encodeURIComponent(subCategory.slug)}`}
+                          className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--text)]"
+                        >
+                          <span aria-hidden="true">↳</span>
+                          {subCategory.name}
+                          <span className="font-normal opacity-70">{subCategory._count.products}</span>
+                        </Link>
+                      ))}
+                    </div>
                   ))}
                 </div>
               </div>
