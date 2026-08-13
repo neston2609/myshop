@@ -5,7 +5,7 @@ export const seoBrandName = "Japan Toy Shop";
 export const defaultSeoTitle = "Japan Toy Shop | ของเล่นญี่ปุ่น POP MART Art Toy ของแท้";
 
 export const defaultSeoDescription =
-  "Japan Toy Shop ร้านของเล่นญี่ปุ่นและอาร์ตทอยของแท้ในไทย มี POP MART, Labubu, Space Molly, ฟิกเกอร์สะสม และสินค้าคัดสภาพ พร้อมจัดส่งทั่วประเทศ";
+  "Japan Toy Shop ร้านของเล่นญี่ปุ่น POP MART และ Art Toy ของแท้ในไทย มี Labubu, Space Molly, ฟิกเกอร์สะสม และสินค้าคัดสภาพ พร้อมจัดส่งทั่วประเทศ";
 
 export const seoKeywords = [
   "ของเล่นญี่ปุ่น",
