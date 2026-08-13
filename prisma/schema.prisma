@@ -89,8 +89,26 @@ model Category {
   imageUrl    String?
   active      Boolean   @default(true)
   products    Product[]
+  subCategories SubCategory[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
+
+model SubCategory {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String
+  description String?
+  active      Boolean   @default(true)
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([categoryId, slug])
+  @@index([categoryId])
+  @@index([active])
 }
 
 model Product {
@@ -106,6 +124,8 @@ model Product {
   active      Boolean        @default(true)
   categoryId  String
   category    Category       @relation(fields: [categoryId], references: [id])
+  subCategoryId String?
+  subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id], onDelete: SetNull)
   media       ProductMedia[]
   orderItems  OrderItem[]
   cartItems   CartItem[]
@@ -115,6 +135,7 @@ model Product {
   updatedAt   DateTime       @updatedAt
 
   @@index([categoryId])
+  @@index([subCategoryId])
   @@index([active])
   @@index([name])
 }

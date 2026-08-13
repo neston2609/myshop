@@ -138,28 +138,18 @@ export default async function Home() {
                     View all
                   </Link>
                 </div>
-                {categories.map((category) => (
-                  <Link
-                    key={category.id}
-                    href={category.slug ? `/categories/${category.slug}` : "/shop"}
-                    className="group grid min-h-[74px] grid-cols-[58px_1fr_24px] items-center gap-3 rounded-md border border-[var(--border)] bg-[var(--surface-raised)] p-2.5 text-[var(--text)]"
-                  >
-                    <span className="relative h-[58px] w-[58px] overflow-hidden rounded-md bg-[var(--surface-soft)]">
-                      {category.imageUrl ? (
-                        <Image src={category.imageUrl} alt={category.name} fill className="object-cover" sizes="56px" />
-                      ) : (
-                        <Package className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[var(--muted)]" size={20} />
-                      )}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate font-semibold">{category.name}</span>
-                      <span className="mt-0.5 line-clamp-1 block text-xs text-[var(--muted)]">
-                        {category.description || `${category._count.products} products`}
-                      </span>
-                    </span>
-                    <ArrowRight className="transition group-hover:translate-x-1" size={17} />
-                  </Link>
-                ))}
+                <div className="flex flex-wrap gap-2">
+                  {categories.map((category) => (
+                    <Link
+                      key={category.id}
+                      href={category.slug ? `/categories/${category.slug}` : "/shop"}
+                      className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)]"
+                    >
+                      {category.name}
+                      <span className="text-xs font-normal text-[var(--muted)]">{category._count.products}</span>
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
             <div className="flex flex-col py-2 lg:py-10">
