@@ -1,8 +1,6 @@
-/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
-import { DownloadEntryList, type DownloadListEntry } from "@/components/download-entry-list";
+import { DownloadEntryList } from "@/components/download-entry-list";
 import { SiteHeader } from "@/components/site-header";
-import { findDownloadFolderCover, listDownloadEntries, type DownloadEntry } from "@/lib/download-sources";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +27,13 @@ function downloadHref(slug: string, input: { path?: string; page?: number; perPa
   return `/downloads/${slug}${query ? `?${query}` : ""}`;
 }
 
+function downloadListApi(slug: string, input: { path?: string }) {
+  const params = new URLSearchParams();
+  if (input.path) params.set("path", input.path);
+  const query = params.toString();
+  return `/api/downloads/${slug}/list${query ? `?${query}` : ""}`;
+}
+
 export default async function DownloadCategoryPage({ params, searchParams }: DownloadCategoryPageProps) {
   const { slug } = await params;
   const query = await searchParams;
@@ -53,25 +58,7 @@ export default async function DownloadCategoryPage({ params, searchParams }: Dow
     );
   }
 
-  let entries: DownloadEntry[] = [];
-  let folderCover: { file: string; source: "cover" } | null = null;
-  let error = "";
-  try {
-    entries = await listDownloadEntries(category, currentPath);
-    folderCover = await findDownloadFolderCover(category, currentPath).catch(() => null);
-  } catch (err) {
-    error = err instanceof Error ? err.message : "Could not load downloads.";
-  }
-
   const segments = currentPath.split("/").filter(Boolean);
-  const listEntries: DownloadListEntry[] = entries.map((entry) => ({
-    name: entry.name,
-    path: entry.path,
-    size: entry.size,
-    thumb: entry.thumb,
-    thumbSource: entry.thumbSource,
-    type: entry.type,
-  }));
 
   return (
     <>
@@ -102,33 +89,16 @@ export default async function DownloadCategoryPage({ params, searchParams }: Dow
           })}
         </div>
 
-        {error ? <p className="mt-5 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-
-        {!error ? (
-          <>
-            {folderCover ? (
-              <section className="mt-5 flex flex-col gap-4 rounded-lg border border-black/10 bg-white p-4 sm:flex-row sm:items-center">
-                <img
-                  src={`/api/downloads/${slug}/thumb?${new URLSearchParams({ path: folderCover.file, source: folderCover.source }).toString()}`}
-                  alt=""
-                  width={168}
-                  height={168}
-                  className="aspect-square h-40 w-40 shrink-0 rounded-md border border-black/10 object-cover"
-                />
-                <div className="min-w-0">
-                  <h2 className="truncate text-2xl font-semibold">{segments[segments.length - 1]}</h2>
-                </div>
-              </section>
-            ) : null}
-            <DownloadEntryList
-              entries={listEntries}
-              initialPage={currentPage}
-              initialPerPage={perPage}
-              hasCoverMapping={Boolean(category.coverPath)}
-              slug={slug}
-            />
-          </>
-        ) : null}
+        <DownloadEntryList
+          key={currentPath || "__root"}
+          entries={[]}
+          folderTitle={segments[segments.length - 1] || category.name}
+          initialPage={currentPage}
+          initialPerPage={perPage}
+          hasCoverMapping={Boolean(category.coverPath)}
+          loadUrl={downloadListApi(slug, { path: currentPath })}
+          slug={slug}
+        />
       </main>
     </>
   );

@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Download, FileText, Folder, Search } from "lucide-react";
 
 export type DownloadListEntry = {
@@ -17,9 +17,12 @@ export type DownloadListEntry = {
 
 type DownloadEntryListProps = {
   entries: DownloadListEntry[];
+  folderCover?: { file: string; source: "cover" } | null;
+  folderTitle?: string;
   initialPage: number;
   initialPerPage: number;
   hasCoverMapping?: boolean;
+  loadUrl?: string;
   slug: string;
 };
 
@@ -52,14 +55,53 @@ function paginationPages(currentPage: number, totalPages: number) {
   return [...pages].filter((page) => page >= 1 && page <= totalPages).sort((a, b) => a - b);
 }
 
-export function DownloadEntryList({ entries, initialPage, initialPerPage, hasCoverMapping = false, slug }: DownloadEntryListProps) {
+export function DownloadEntryList({
+  entries,
+  folderCover: initialFolderCover = null,
+  folderTitle = "",
+  initialPage,
+  initialPerPage,
+  hasCoverMapping = false,
+  loadUrl,
+  slug,
+}: DownloadEntryListProps) {
+  const [listEntries, setListEntries] = useState(entries);
+  const [folderCover, setFolderCover] = useState(initialFolderCover);
+  const [loading, setLoading] = useState(Boolean(loadUrl));
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [perPage, setPerPage] = useState(pageSizeOptions.includes(initialPerPage) ? initialPerPage : pageSizeOptions[0]);
   const [page, setPage] = useState(Math.max(1, initialPage));
+
+  useEffect(() => {
+    if (!loadUrl) return;
+    let cancelled = false;
+    fetch(loadUrl, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(await response.text());
+        return response.json() as Promise<{ entries?: DownloadListEntry[]; folderCover?: { file: string; source: "cover" } | null }>;
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setListEntries(data.entries || []);
+        setFolderCover(data.folderCover || null);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setLoadError(error instanceof Error ? error.message : "Could not load downloads.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadUrl]);
+
   const normalizedSearch = search.trim().toLowerCase();
   const filteredEntries = normalizedSearch
-    ? entries.filter((entry) => `${entry.name} ${entry.path} ${entry.type}`.toLowerCase().includes(normalizedSearch))
-    : entries;
+    ? listEntries.filter((entry) => `${entry.name} ${entry.path} ${entry.type}`.toLowerCase().includes(normalizedSearch))
+    : listEntries;
   const totalItems = filteredEntries.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
   const safePage = Math.min(page, totalPages);
@@ -70,6 +112,35 @@ export function DownloadEntryList({ entries, initialPage, initialPerPage, hasCov
 
   return (
     <>
+      {loading ? (
+        <div className="mt-5 rounded-lg border border-black/10 bg-white p-6 text-slate-600">
+          <div className="flex items-center gap-3">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-[#0f766e] border-t-transparent" />
+            <span className="font-semibold">กำลังโหลด folder/file และคำนวณขนาดจาก server กรุณารอสักครู่...</span>
+          </div>
+          <p className="mt-2 text-sm text-slate-500">ระบบกำลังเชื่อมต่อ download server เพื่อดึงรายการล่าสุด หน้าเว็บไม่ได้ค้างครับ</p>
+        </div>
+      ) : null}
+
+      {loadError ? <p className="mt-5 rounded-md bg-red-50 p-3 text-sm text-red-700">{loadError}</p> : null}
+
+      {!loading && !loadError ? (
+      <>
+      {folderCover ? (
+        <section className="mt-5 flex flex-col gap-4 rounded-lg border border-black/10 bg-white p-4 sm:flex-row sm:items-center">
+          <img
+            src={`/api/downloads/${slug}/thumb?${new URLSearchParams({ path: folderCover.file, source: folderCover.source }).toString()}`}
+            alt=""
+            width={168}
+            height={168}
+            className="aspect-square h-40 w-40 shrink-0 rounded-md border border-black/10 object-cover"
+          />
+          <div className="min-w-0">
+            <h2 className="truncate text-2xl font-semibold">{folderTitle}</h2>
+          </div>
+        </section>
+      ) : null}
+
       <div className="mt-5 grid gap-3 rounded-lg border border-black/10 bg-white p-3 text-sm lg:grid-cols-[1fr_auto] lg:items-center">
         <label className="grid gap-1.5 font-semibold text-slate-700">
           <span>Search downloads</span>
@@ -103,7 +174,7 @@ export function DownloadEntryList({ entries, initialPage, initialPerPage, hasCov
         </label>
         <span className="text-slate-600 lg:col-span-2">
           Showing {firstItem}-{lastItem} of {totalItems} items
-          {search ? <span className="text-slate-400"> filtered from {entries.length}</span> : null}
+          {search ? <span className="text-slate-400"> filtered from {listEntries.length}</span> : null}
         </span>
       </div>
 
@@ -141,8 +212,8 @@ export function DownloadEntryList({ entries, initialPage, initialPerPage, hasCov
             </div>
           );
         })}
-        {entries.length === 0 ? <p className="p-6 text-slate-600">This folder is empty.</p> : null}
-        {entries.length > 0 && filteredEntries.length === 0 ? <p className="p-6 text-slate-600">No downloads match your search.</p> : null}
+        {listEntries.length === 0 ? <p className="p-6 text-slate-600">This folder is empty.</p> : null}
+        {listEntries.length > 0 && filteredEntries.length === 0 ? <p className="p-6 text-slate-600">No downloads match your search.</p> : null}
       </div>
 
       {totalItems > perPage ? (
@@ -179,6 +250,8 @@ export function DownloadEntryList({ entries, initialPage, initialPerPage, hasCov
             ) : null}
           </div>
         </div>
+      ) : null}
+      </>
       ) : null}
     </>
   );
