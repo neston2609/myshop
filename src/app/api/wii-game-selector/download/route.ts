@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   if (selected.length !== codes.length) return new Response("มีรหัสเกมที่ไม่ถูกต้อง กรุณา refresh แล้วเลือกใหม่", { status: 400 });
 
   const limits = wiiSelectorSizeLimits(settings);
-  const totalBytes = selected.reduce((sum, entry) => sum + entry.sizeBytes, 0);
+  const totalBytes = selected.reduce((sum, entry) => sum + Number(entry.sizeBytes || 0), 0);
   if (totalBytes < limits.minBytes || totalBytes > limits.maxBytes) {
     return new Response(`ขนาดรวมต้องอยู่ระหว่าง ${limits.minGb} GB ถึง ${limits.maxGb} GB`, { status: 400 });
   }

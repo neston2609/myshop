@@ -10,6 +10,7 @@ type WiiGameSelectorProps = {
   entries: WiiGameSelectorEntry[];
   categorySlug: string;
   loadUrl?: string;
+  sizeLoadUrl?: string;
   minSizeBytes: number;
   maxSizeBytes: number;
   minSizeGb: number;
@@ -38,6 +39,7 @@ export function WiiGameSelector({
   entries,
   categorySlug,
   loadUrl,
+  sizeLoadUrl,
   minSizeBytes,
   maxSizeBytes,
   minSizeGb,
@@ -47,16 +49,19 @@ export function WiiGameSelector({
 }: WiiGameSelectorProps) {
   const [gameEntries, setGameEntries] = useState(entries);
   const [loadingList, setLoadingList] = useState(Boolean(loadUrl && entries.length === 0));
+  const [loadingSizes, setLoadingSizes] = useState(Boolean(loadUrl && entries.length === 0));
   const [loadError, setLoadError] = useState("");
+  const [sizeError, setSizeError] = useState("");
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
   const [downloading, setDownloading] = useState(false);
   const [message, setMessage] = useState("");
   const entryMap = useMemo(() => new Map(gameEntries.map((entry) => [entry.code, entry])), [gameEntries]);
   const selectedEntries = selectedCodes.map((code) => entryMap.get(code)).filter(Boolean) as WiiGameSelectorEntry[];
-  const selectedBytes = selectedEntries.reduce((sum, entry) => sum + entry.sizeBytes, 0);
+  const selectedBytes = selectedEntries.reduce((sum, entry) => sum + Number(entry.sizeBytes || 0), 0);
+  const selectedSizesReady = selectedEntries.every((entry) => entry.sizeBytes != null);
   const remainingBytes = Math.max(0, maxSizeBytes - selectedBytes);
   const needBytes = Math.max(0, minSizeBytes - selectedBytes);
-  const isValid = selectedCodes.length > 0 && selectedBytes >= minSizeBytes && selectedBytes <= maxSizeBytes;
+  const isValid = selectedCodes.length > 0 && selectedSizesReady && selectedBytes >= minSizeBytes && selectedBytes <= maxSizeBytes;
   const isOver = selectedBytes > maxSizeBytes;
 
   useEffect(() => {
@@ -69,11 +74,14 @@ export function WiiGameSelector({
       })
       .then((data) => {
         if (cancelled) return;
-        setGameEntries(data.entries || []);
+        const nextEntries = data.entries || [];
+        setGameEntries(nextEntries);
+        setLoadingSizes(nextEntries.length > 0);
       })
       .catch((error) => {
         if (cancelled) return;
         setLoadError(error instanceof Error ? error.message : "ไม่สามารถโหลดรายชื่อเกมได้");
+        setLoadingSizes(false);
       })
       .finally(() => {
         if (!cancelled) setLoadingList(false);
@@ -82,6 +90,34 @@ export function WiiGameSelector({
       cancelled = true;
     };
   }, [entries.length, loadUrl]);
+
+  useEffect(() => {
+    if (!sizeLoadUrl || loadingList || gameEntries.length === 0 || gameEntries.every((entry) => entry.sizeBytes != null)) return;
+    let cancelled = false;
+    fetch(sizeLoadUrl, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(await response.text());
+        return response.json() as Promise<{ sizes?: Array<{ code: string; sizeBytes: number }> }>;
+      })
+      .then((data) => {
+        if (cancelled) return;
+        const sizes = new Map((data.sizes || []).map((item) => [item.code, item.sizeBytes]));
+        setGameEntries((current) => current.map((entry) => ({
+          ...entry,
+          sizeBytes: sizes.has(entry.code) ? sizes.get(entry.code) ?? null : entry.sizeBytes,
+        })));
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setSizeError(error instanceof Error ? error.message : "ไม่สามารถโหลดขนาดเกมได้");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSizes(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [gameEntries, loadingList, sizeLoadUrl]);
 
   function toggle(code: string, checked: boolean) {
     setMessage("");
@@ -156,7 +192,7 @@ export function WiiGameSelector({
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <p className={`text-sm ${isOver ? "text-red-600" : "text-[var(--muted)]"}`}>
-              {isOver ? `เกินกำหนด ${formatBytes(selectedBytes - maxSizeBytes)}` : needBytes > 0 ? `ต้องเลือกเพิ่มอย่างน้อย ${formatBytes(needBytes)}` : `เลือกเพิ่มได้อีก ${formatBytes(remainingBytes)}`}
+              {!selectedSizesReady ? "กำลังโหลดขนาดไฟล์ที่เลือก..." : isOver ? `เกินกำหนด ${formatBytes(selectedBytes - maxSizeBytes)}` : needBytes > 0 ? `ต้องเลือกเพิ่มอย่างน้อย ${formatBytes(needBytes)}` : `เลือกเพิ่มได้อีก ${formatBytes(remainingBytes)}`}
             </p>
             {renderDownloadButton(true)}
           </div>
@@ -166,13 +202,25 @@ export function WiiGameSelector({
 
       {loadingList ? (
         <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 text-[var(--muted)]">
-          กำลังโหลดรายชื่อเกมจาก FTPS กรุณารอสักครู่...
+          กำลังโหลดรายชื่อเกมและ cover จาก FTPS กรุณารอสักครู่...
+        </div>
+      ) : null}
+
+      {!loadingList && loadingSizes ? (
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 text-sm font-semibold text-[var(--muted)]">
+          รายชื่อเกมพร้อมแล้ว กำลังโหลดขนาดไฟล์เพิ่มเติม...
         </div>
       ) : null}
 
       {loadError ? (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
           {loadError}
+        </div>
+      ) : null}
+
+      {sizeError ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+          {sizeError}
         </div>
       ) : null}
 
@@ -186,7 +234,7 @@ export function WiiGameSelector({
         </div>
         {gameEntries.map((entry) => {
           const checked = selectedCodes.includes(entry.code);
-          const disabled = !entry.code;
+          const disabled = !entry.code || entry.sizeBytes == null;
           const thumbParams = new URLSearchParams({ path: entry.coverFile || "", source: entry.coverSource || "cover" });
           return (
             <label
@@ -229,11 +277,12 @@ export function WiiGameSelector({
                 />
                 <span className="min-w-0">
                   <span className="block truncate font-semibold">{entry.name}</span>
-                  {disabled ? <span className="text-sm text-red-600">ไม่พบรหัสในชื่อ folder</span> : null}
+                  {!entry.code ? <span className="text-sm text-red-600">ไม่พบรหัสในชื่อ folder</span> : null}
+                  {entry.code && entry.sizeBytes == null ? <span className="text-sm text-[var(--muted)]">กำลังโหลดขนาดไฟล์...</span> : null}
                 </span>
               </span>
               <span className="text-sm font-semibold text-[var(--muted)]">{entry.code || "-"}</span>
-              <span className="text-sm font-semibold md:text-right">{formatBytes(entry.sizeBytes)}</span>
+              <span className="text-sm font-semibold md:text-right">{entry.sizeBytes == null ? "Loading..." : formatBytes(entry.sizeBytes)}</span>
             </label>
           );
         })}

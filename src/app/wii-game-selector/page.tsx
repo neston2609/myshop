@@ -40,6 +40,7 @@ export default async function WiiGameSelectorPage() {
               entries={[]}
               categorySlug={category.slug}
               loadUrl="/api/wii-game-selector/list"
+              sizeLoadUrl="/api/wii-game-selector/sizes"
               minSizeBytes={limits.minBytes}
               maxSizeBytes={limits.maxBytes}
               minSizeGb={limits.minGb}

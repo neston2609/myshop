@@ -20,7 +20,7 @@ export type WiiGameSelectorEntry = {
   name: string;
   code: string;
   path: string;
-  sizeBytes: number;
+  sizeBytes: number | null;
   coverFile?: string;
   coverSource?: "cover";
 };
@@ -228,6 +228,32 @@ export async function listWiiGameSelectorEntries(category: CategoryWithSource) {
     }
 
     return out.sort((a, b) => a.name.localeCompare(b.name));
+  });
+}
+
+export async function listWiiGameSelectorFolders(category: CategoryWithSource) {
+  if (!category.source) throw new Error("This download category is not mapped to a source.");
+  const rules = await hideRegexes();
+  return withClient(category.source, async (ops) => {
+    const dir = safeResolve(category.remotePath, "");
+    const entries = await ops.list(dir);
+    const covers = await coverMap(ops, category.coverPath);
+    const folders = entries.filter((entry) => entry.type === "dir" && !isHidden(entry.name, rules));
+
+    return folders
+      .map((folder) => {
+        const code = downloadFolderCode(folder.name);
+        const coverFile = code ? covers.get(code.toLowerCase()) : undefined;
+        return {
+          name: folder.name,
+          code,
+          path: folder.name,
+          sizeBytes: null,
+          coverFile,
+          coverSource: coverFile ? "cover" as const : undefined,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
   });
 }
 

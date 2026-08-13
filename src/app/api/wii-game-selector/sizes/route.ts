@@ -1,4 +1,4 @@
-import { listWiiGameSelectorFolders } from "@/lib/download-sources";
+import { listWiiGameSelectorEntries } from "@/lib/download-sources";
 import { getWiiSelectorCategory } from "@/lib/wii-game-selector";
 
 export const dynamic = "force-dynamic";
@@ -8,16 +8,18 @@ export async function GET() {
   if (!category) return new Response("ไม่พบ Download Category สำหรับ Nintendo Wii", { status: 404 });
 
   try {
-    const entries = await listWiiGameSelectorFolders(category);
+    const entries = await listWiiGameSelectorEntries(category);
     return Response.json({
-      categorySlug: category.slug,
-      entries,
+      sizes: entries.map((entry) => ({
+        code: entry.code,
+        sizeBytes: entry.sizeBytes,
+      })),
     }, {
       headers: {
         "Cache-Control": "no-store",
       },
     });
   } catch (error) {
-    return new Response(error instanceof Error ? error.message : "ไม่สามารถโหลดรายชื่อเกมได้", { status: 500 });
+    return new Response(error instanceof Error ? error.message : "ไม่สามารถโหลดขนาดเกมได้", { status: 500 });
   }
 }
