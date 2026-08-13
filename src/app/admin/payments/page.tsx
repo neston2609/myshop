@@ -112,21 +112,23 @@ function ProviderSummary({ provider, credentials }: { provider: string; credenti
 
 function BankTransferSummary({ credentials }: { credentials: PaymentCredentials }) {
   return (
-    <div className="mt-3 grid gap-3 sm:grid-cols-[52px_52px_minmax(0,1fr)] sm:items-center">
-      <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-md bg-white">
-        <BankLogo code={credentials.bankCode} name={credentials.bankName} />
-      </div>
-      {credentials.qrCodeUrl ? (
-        <Image src={credentials.qrCodeUrl} alt="Bank transfer QR" width={52} height={52} className="h-[52px] w-[52px] rounded-md border border-[var(--border)] bg-white object-contain" />
-      ) : (
-        <div className="flex h-[52px] w-[52px] items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] text-[10px] font-semibold text-[var(--muted)]">
-          No QR
+    <div className="mt-3 grid min-w-0 gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white">
+          <BankLogo code={credentials.bankCode} name={credentials.bankName} />
         </div>
-      )}
-      <div className="min-w-0 text-xs leading-5 text-[var(--muted)]">
-        <p className="break-words font-semibold text-[var(--text)]">{credentials.bankName || "Bank not set"}</p>
-        <p className="break-words">{credentials.accountName || "Account not set"}</p>
-        {credentials.accountNumber ? <p className="break-words">Account: {credentials.accountNumber}</p> : null}
+        {credentials.qrCodeUrl ? (
+          <Image src={credentials.qrCodeUrl} alt="Bank transfer QR" width={52} height={52} className="h-[52px] w-[52px] shrink-0 rounded-md border border-[var(--border)] bg-white object-contain" />
+        ) : (
+          <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] text-[10px] font-semibold text-[var(--muted)]">
+            No QR
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs leading-5 text-[var(--muted)]">
+        <p className="font-semibold text-[var(--text)]">{credentials.bankName || "Bank not set"}</p>
+        <p className="mt-0.5 break-words">{credentials.accountName || "Account not set"}</p>
+        {credentials.accountNumber ? <p className="mt-0.5 break-words">Account: {credentials.accountNumber}</p> : null}
       </div>
     </div>
   );
