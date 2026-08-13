@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Package, ShieldCheck, Sparkles, Truck } from "lucide-react";
+import { ArrowRight, CornerDownRight, Package, ShieldCheck, Sparkles, Truck } from "lucide-react";
 import { JsonLd } from "@/components/json-ld";
 import { ProductCard } from "@/components/product-card";
 import { SiteHeader } from "@/components/site-header";
@@ -147,25 +147,31 @@ export default async function Home() {
                 </div>
                 <div className="grid gap-2">
                   {categories.map((category) => (
-                    <div key={category.id} className="flex flex-wrap items-center gap-2">
+                    <div key={category.id} className="grid gap-1.5">
                       <Link
                         href={category.slug ? `/categories/${category.slug}` : "/shop"}
-                        className="inline-flex min-h-10 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-raised)] px-3 py-2 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)]"
+                        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--surface-raised)] px-4 py-2.5 text-sm font-semibold text-[var(--text)] transition hover:border-[var(--accent)]"
                       >
-                        {category.name}
+                        <span>{category.name}</span>
                         <span className="text-xs font-normal text-[var(--muted)]">{category._count.products}</span>
                       </Link>
-                      {category.subCategories.map((subCategory) => (
-                        <Link
-                          key={subCategory.id}
-                          href={`/categories/${category.slug}?sub=${encodeURIComponent(subCategory.slug)}`}
-                          className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--text)]"
-                        >
-                          <span aria-hidden="true">↳</span>
-                          {subCategory.name}
-                          <span className="font-normal opacity-70">{subCategory._count.products}</span>
-                        </Link>
-                      ))}
+                      {category.subCategories.length ? (
+                        <div className="ml-4 grid gap-1.5 border-l border-[var(--border)] pl-3">
+                          {category.subCategories.map((subCategory) => (
+                            <Link
+                              key={subCategory.id}
+                              href={`/categories/${category.slug}?sub=${encodeURIComponent(subCategory.slug)}`}
+                              className="flex min-h-10 w-full items-center justify-between gap-3 rounded-md border border-[var(--border)] px-3 py-2 text-xs font-semibold text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--text)]"
+                            >
+                              <span className="flex min-w-0 items-center gap-2">
+                                <CornerDownRight aria-hidden="true" size={14} className="shrink-0" />
+                                <span className="truncate">{subCategory.name}</span>
+                              </span>
+                              <span className="shrink-0 font-normal opacity-70">{subCategory._count.products}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>
