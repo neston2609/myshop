@@ -662,6 +662,31 @@ export async function deleteProductAction(formData: FormData) {
   redirect("/admin/products?message=product-deleted");
 }
 
+export async function saveRecommendedProductsAction(formData: FormData) {
+  await requireAdmin();
+  const selectedIds = Array.from({ length: 8 }, (_, index) => formValue(formData, `productId${index + 1}`))
+    .filter(Boolean)
+    .filter((id, index, list) => list.indexOf(id) === index)
+    .slice(0, 8);
+
+  const products = selectedIds.length
+    ? await prisma.product.findMany({ where: { id: { in: selectedIds } }, select: { id: true } })
+    : [];
+  const validIds = new Set(products.map((product) => product.id));
+
+  await prisma.$transaction(async (tx) => {
+    await tx.product.updateMany({ data: { recommendedPosition: null } });
+    for (const [index, id] of selectedIds.entries()) {
+      if (!validIds.has(id)) continue;
+      await tx.product.update({ where: { id }, data: { recommendedPosition: index + 1 } });
+    }
+  });
+
+  revalidatePath("/");
+  revalidatePath("/admin/recommend-products");
+  redirect("/admin/recommend-products?message=saved");
+}
+
 export async function saveCategoryAction(formData: FormData) {
   await requireAdmin();
   const input = categorySchema.parse({ ...Object.fromEntries(formData), active: formData.has("active") });

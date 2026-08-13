@@ -56,9 +56,9 @@ const seoFaqs = [
 export default async function Home() {
   const [products, categories, settings, session] = await Promise.all([
     prisma.product.findMany({
-      where: { active: true },
+      where: { active: true, recommendedPosition: { not: null } },
       take: 8,
-      orderBy: { createdAt: "desc" },
+      orderBy: { recommendedPosition: "asc" },
       include: { category: true, media: { orderBy: { sortOrder: "asc" } } },
     }),
     prisma.category.findMany({
@@ -216,13 +216,18 @@ export default async function Home() {
           <div className="flex items-end justify-between gap-4">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Featured</p>
-              <h2 className="mt-2 text-3xl font-semibold text-[var(--text)]">Latest products</h2>
+              <h2 className="mt-2 text-3xl font-semibold text-[var(--text)]">Recommend Products</h2>
             </div>
             <Link href="/shop" className="hidden text-sm font-semibold text-[var(--accent)] md:block">View all</Link>
           </div>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {products.map((product) => <ProductCard key={product.id} product={product} />)}
           </div>
+          {products.length === 0 ? (
+            <p className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 text-[var(--muted)]">
+              ยังไม่มีสินค้าแนะนำ
+            </p>
+          ) : null}
         </section>
         <section className="border-t border-[var(--border)] bg-[var(--surface)]">
           <div className="container-shell grid gap-8 py-12 lg:grid-cols-[0.9fr_1.1fr]">

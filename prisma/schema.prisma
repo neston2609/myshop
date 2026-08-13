@@ -82,16 +82,16 @@ model PasswordResetToken {
 }
 
 model Category {
-  id          String    @id @default(cuid())
-  name        String
-  slug        String    @unique
-  description String?
-  imageUrl    String?
-  active      Boolean   @default(true)
-  products    Product[]
+  id            String        @id @default(cuid())
+  name          String
+  slug          String        @unique
+  description   String?
+  imageUrl      String?
+  active        Boolean       @default(true)
+  products      Product[]
   subCategories SubCategory[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
 
 model SubCategory {
@@ -112,31 +112,33 @@ model SubCategory {
 }
 
 model Product {
-  id          String         @id @default(cuid())
-  name        String
-  slug        String         @unique
-  description String
-  seoTitle    String?
-  seoText     String?
-  price       Decimal        @db.Decimal(10, 2)
-  sku         String         @unique
-  stock       Int            @default(0)
-  active      Boolean        @default(true)
-  categoryId  String
-  category    Category       @relation(fields: [categoryId], references: [id])
-  subCategoryId String?
-  subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id], onDelete: SetNull)
-  media       ProductMedia[]
-  orderItems  OrderItem[]
-  cartItems   CartItem[]
-  reviews     Review[]
-  wishlist    WishlistItem[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id                  String         @id @default(cuid())
+  name                String
+  slug                String         @unique
+  description         String
+  seoTitle            String?
+  seoText             String?
+  price               Decimal        @db.Decimal(10, 2)
+  sku                 String         @unique
+  stock               Int            @default(0)
+  active              Boolean        @default(true)
+  recommendedPosition Int?
+  categoryId          String
+  category            Category       @relation(fields: [categoryId], references: [id])
+  subCategoryId       String?
+  subCategory         SubCategory?   @relation(fields: [subCategoryId], references: [id], onDelete: SetNull)
+  media               ProductMedia[]
+  orderItems          OrderItem[]
+  cartItems           CartItem[]
+  reviews             Review[]
+  wishlist            WishlistItem[]
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
   @@index([categoryId])
   @@index([subCategoryId])
   @@index([active])
+  @@index([recommendedPosition])
   @@index([name])
 }
 
