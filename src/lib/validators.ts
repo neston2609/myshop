@@ -69,6 +69,7 @@ export const productSchema = z.object({
   sku: z.string().min(2).max(64),
   stock: z.coerce.number().int().min(0),
   categoryId: z.string().min(1),
+  subCategoryId: z.string().optional(),
   active: z.coerce.boolean().default(true),
   imageUrl: uploadedImageSchema.optional(),
   imageUrls: z.string().optional(),
@@ -79,6 +80,13 @@ export const categorySchema = z.object({
   name: z.string().min(2).max(100),
   description: z.string().max(240).optional(),
   imageUrl: uploadedImageSchema.optional(),
+  active: z.coerce.boolean().default(true),
+});
+
+export const subCategorySchema = z.object({
+  name: z.string().trim().min(2).max(100),
+  description: z.string().trim().max(240).optional(),
+  categoryId: z.string().min(1),
   active: z.coerce.boolean().default(true),
 });
 

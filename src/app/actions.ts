@@ -37,6 +37,7 @@ import {
   shopDescriptionSchema,
   siteSettingsSchema,
   smtpSchema,
+  subCategorySchema,
 } from "@/lib/validators";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createPasswordResetToken, hashPasswordResetToken, sendPasswordResetEmail } from "@/lib/password-reset";
@@ -602,6 +603,13 @@ export async function saveProductAction(formData: FormData) {
   const existingSku = await prisma.product.findUnique({ where: { sku: input.sku }, select: { id: true } });
   if (existingSku && existingSku.id !== id) redirect("/admin/products?message=sku-taken");
   const slug = await uniqueProductSlug(input.name, input.sku, id || undefined);
+  const subCategory = input.subCategoryId
+    ? await prisma.subCategory.findFirst({
+        where: { id: input.subCategoryId, categoryId: input.categoryId },
+        select: { id: true },
+      })
+    : null;
+  if (input.subCategoryId && !subCategory) redirect("/admin/products?message=invalid-subcategory");
   const data = {
     name: input.name,
     slug,
@@ -610,6 +618,7 @@ export async function saveProductAction(formData: FormData) {
     sku: input.sku,
     stock: input.stock,
     categoryId: input.categoryId,
+    subCategoryId: subCategory?.id || null,
     active: input.active,
   };
 
@@ -654,6 +663,7 @@ export async function deleteProductAction(formData: FormData) {
 }
 
 export async function saveCategoryAction(formData: FormData) {
+  await requireAdmin();
   const input = categorySchema.parse({ ...Object.fromEntries(formData), active: formData.has("active") });
   const id = formValue(formData, "id");
   const data = {
@@ -671,6 +681,7 @@ export async function saveCategoryAction(formData: FormData) {
 }
 
 export async function deleteCategoryAction(formData: FormData) {
+  await requireAdmin();
   const id = formValue(formData, "id");
   if (!id) return;
 
@@ -687,6 +698,52 @@ export async function deleteCategoryAction(formData: FormData) {
   revalidatePath("/admin/categories");
   revalidatePath("/shop");
   revalidatePath("/");
+}
+
+export async function saveSubCategoryAction(formData: FormData) {
+  await requireAdmin();
+  const input = subCategorySchema.parse({ ...Object.fromEntries(formData), active: formData.has("active") });
+  const id = formValue(formData, "id");
+  const slug = slugify(input.name) || `subcategory-${nanoid(6).toLowerCase()}`;
+  const data = {
+    name: input.name,
+    slug,
+    description: input.description || null,
+    categoryId: input.categoryId,
+    active: input.active,
+  };
+
+  const previous = id
+    ? await prisma.subCategory.findUnique({ where: { id }, select: { category: { select: { slug: true } } } })
+    : null;
+  if (id) {
+    await prisma.$transaction([
+      prisma.subCategory.update({ where: { id }, data }),
+      prisma.product.updateMany({ where: { subCategoryId: id }, data: { categoryId: input.categoryId } }),
+    ]);
+  } else {
+    await prisma.subCategory.create({ data });
+  }
+
+  const category = await prisma.category.findUnique({ where: { id: input.categoryId }, select: { slug: true } });
+  revalidatePath("/admin/categories");
+  revalidatePath("/admin/products");
+  if (previous) revalidatePath(`/categories/${previous.category.slug}`);
+  if (category) revalidatePath(`/categories/${category.slug}`);
+}
+
+export async function deleteSubCategoryAction(formData: FormData) {
+  await requireAdmin();
+  const id = formValue(formData, "id");
+  if (!id) return;
+  const subCategory = await prisma.subCategory.findUnique({
+    where: { id },
+    select: { category: { select: { slug: true } } },
+  });
+  await prisma.subCategory.delete({ where: { id } });
+  revalidatePath("/admin/categories");
+  revalidatePath("/admin/products");
+  if (subCategory) revalidatePath(`/categories/${subCategory.category.slug}`);
 }
 
 export async function saveShippingAction(formData: FormData) {

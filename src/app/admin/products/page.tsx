@@ -11,6 +11,29 @@ type AdminProductsPageProps = {
   searchParams: Promise<{ message?: string; category?: string; duplicate?: string }>;
 };
 
+type CategoryOption = {
+  id: string;
+  name: string;
+  subCategories: { id: string; name: string; active: boolean }[];
+};
+
+function SubCategorySelect({ categories, defaultValue }: { categories: CategoryOption[]; defaultValue?: string | null }) {
+  return (
+    <select name="subCategoryId" defaultValue={defaultValue || ""} className="h-10 rounded-md border border-black/10 bg-white px-3">
+      <option value="">No subcategory</option>
+      {categories.map((category) => (
+        <optgroup key={category.id} label={category.name}>
+          {category.subCategories.map((subCategory) => (
+            <option key={subCategory.id} value={subCategory.id} disabled={!subCategory.active}>
+              {subCategory.name}{!subCategory.active ? " (inactive)" : ""}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
+  );
+}
+
 function adminProductsHref(input: { category?: string; duplicate?: string }) {
   const params = new URLSearchParams();
   if (input.category) params.set("category", input.category);
@@ -46,10 +69,13 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
   const [products, categories, duplicateProduct] = await Promise.all([
     prisma.product.findMany({
       where: selectedCategory ? { category: { slug: selectedCategory } } : undefined,
-      include: { category: true, media: { orderBy: { sortOrder: "asc" } } },
+      include: { category: true, subCategory: true, media: { orderBy: { sortOrder: "asc" } } },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.category.findMany({ orderBy: { name: "asc" } }),
+    prisma.category.findMany({
+      include: { subCategories: { orderBy: { name: "asc" } } },
+      orderBy: { name: "asc" },
+    }),
     params.duplicate
       ? prisma.product.findUnique({
           where: { id: params.duplicate },
@@ -105,7 +131,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                   </div>
                   <span className="font-medium">
                     {product.name}
-                    <span className="ml-2 text-slate-400">{product.category.name}</span>
+                    <span className="ml-2 text-slate-400">{product.category.name}{product.subCategory ? ` / ${product.subCategory.name}` : ""}</span>
                     {!product.active ? <span className="ml-2 text-xs text-red-600">Inactive</span> : null}
                   </span>
                   <span>{product.sku}</span>
@@ -125,6 +151,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                     <select name="categoryId" defaultValue={product.categoryId} required className="h-10 rounded-md border border-black/10 bg-white px-3">
                       {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
                     </select>
+                    <SubCategorySelect categories={categories} defaultValue={product.subCategoryId} />
                     <MultiImageUploadField name="imageUrls" label="Product images" defaultValues={imageUrls} />
                     <AiDescriptionButton />
                     <input name="youtubeUrl" defaultValue={youtubeUrl} placeholder="YouTube URL" className="h-10 rounded-md border border-black/10 bg-white px-3" />
@@ -163,6 +190,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
         <select name="categoryId" defaultValue={duplicateProduct?.categoryId || categories[0]?.id} required className="h-10 rounded-md border border-black/10 px-3">
           {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
         </select>
+        <SubCategorySelect categories={categories} defaultValue={duplicateProduct?.subCategoryId} />
         <MultiImageUploadField name="imageUrls" label="Product images" defaultValues={duplicateImageUrls} />
         <AiDescriptionButton />
         <input name="youtubeUrl" defaultValue={duplicateYoutubeUrl} placeholder="YouTube URL" className="h-10 rounded-md border border-black/10 px-3" />
