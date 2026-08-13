@@ -71,7 +71,7 @@ async function cdAbs(client: Client, target: string) {
 }
 
 async function withFtp<T>(source: DownloadSource, secure: boolean, fn: (ops: Ops) => Promise<T>) {
-  const client = new Client(30000);
+  const client = new Client(30000, { allowSeparateTransferHost: true });
   client.ftp.verbose = false;
   await client.access({
     host: source.host || "",

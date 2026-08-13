@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Download, FileText, Folder, Search } from "lucide-react";
@@ -117,7 +116,7 @@ export function DownloadEntryList({ entries, initialPage, initialPerPage, hasCov
               <div className="flex min-w-0 items-center gap-3">
                 {entry.type === "dir" ? (
                   entry.thumb ? (
-                    <Image src={`/api/downloads/${slug}/thumb?${thumbParams.toString()}`} alt="" width={112} height={112} className={`${imageSizeClass} shrink-0 rounded-md border border-black/10 object-cover`} />
+                    <img src={`/api/downloads/${slug}/thumb?${thumbParams.toString()}`} alt="" width={112} height={112} className={`${imageSizeClass} shrink-0 rounded-md border border-black/10 object-cover`} />
                   ) : (
                     <Folder className="shrink-0 text-[#0f766e]" size={iconSize} />
                   )
