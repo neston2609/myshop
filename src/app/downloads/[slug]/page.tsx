@@ -1,7 +1,8 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { DownloadEntryList, type DownloadListEntry } from "@/components/download-entry-list";
 import { SiteHeader } from "@/components/site-header";
-import { listDownloadEntries, type DownloadEntry } from "@/lib/download-sources";
+import { findDownloadFolderCover, listDownloadEntries, type DownloadEntry } from "@/lib/download-sources";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -53,9 +54,11 @@ export default async function DownloadCategoryPage({ params, searchParams }: Dow
   }
 
   let entries: DownloadEntry[] = [];
+  let folderCover: { file: string; source: "cover" } | null = null;
   let error = "";
   try {
     entries = await listDownloadEntries(category, currentPath);
+    folderCover = await findDownloadFolderCover(category, currentPath).catch(() => null);
   } catch (err) {
     error = err instanceof Error ? err.message : "Could not load downloads.";
   }
@@ -102,13 +105,29 @@ export default async function DownloadCategoryPage({ params, searchParams }: Dow
         {error ? <p className="mt-5 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
 
         {!error ? (
-          <DownloadEntryList
-            entries={listEntries}
-            initialPage={currentPage}
-            initialPerPage={perPage}
-            hasCoverMapping={Boolean(category.coverPath)}
-            slug={slug}
-          />
+          <>
+            {folderCover ? (
+              <section className="mt-5 flex flex-col gap-4 rounded-lg border border-black/10 bg-white p-4 sm:flex-row sm:items-center">
+                <img
+                  src={`/api/downloads/${slug}/thumb?${new URLSearchParams({ path: folderCover.file, source: folderCover.source }).toString()}`}
+                  alt=""
+                  width={168}
+                  height={168}
+                  className="aspect-square h-40 w-40 shrink-0 rounded-md border border-black/10 object-cover"
+                />
+                <div className="min-w-0">
+                  <h2 className="truncate text-2xl font-semibold">{segments[segments.length - 1]}</h2>
+                </div>
+              </section>
+            ) : null}
+            <DownloadEntryList
+              entries={listEntries}
+              initialPage={currentPage}
+              initialPerPage={perPage}
+              hasCoverMapping={Boolean(category.coverPath)}
+              slug={slug}
+            />
+          </>
         ) : null}
       </main>
     </>

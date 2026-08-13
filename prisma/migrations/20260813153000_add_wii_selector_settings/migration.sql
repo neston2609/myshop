@@ -1,0 +1,3 @@
+ALTER TABLE "SiteSettings"
+  ADD COLUMN "wiiSelectorMinSizeGb" DECIMAL(10, 2) NOT NULL DEFAULT 35,
+  ADD COLUMN "wiiSelectorMaxSizeGb" DECIMAL(10, 2) NOT NULL DEFAULT 44.5;

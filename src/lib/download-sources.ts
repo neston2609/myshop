@@ -16,6 +16,15 @@ export type DownloadEntry = {
   thumbSource?: "folder" | "cover";
 };
 
+export type WiiGameSelectorEntry = {
+  name: string;
+  code: string;
+  path: string;
+  sizeBytes: number;
+  coverFile?: string;
+  coverSource?: "cover";
+};
+
 type Ops = {
   list(remotePath: string): Promise<Array<Omit<DownloadEntry, "path">>>;
   stat(remotePath: string): Promise<{ size?: number | null; isDirectory: boolean }>;
@@ -156,6 +165,10 @@ function folderCoverKey(name: string) {
   return matches.at(-1)?.[1]?.trim().toLowerCase() || "";
 }
 
+export function downloadFolderCode(name: string) {
+  return folderCoverKey(name).toUpperCase();
+}
+
 async function coverMap(ops: Ops, coverPath?: string | null) {
   if (!coverPath) return new Map<string, string>();
   try {
@@ -172,6 +185,50 @@ async function coverMap(ops: Ops, coverPath?: string | null) {
   } catch {
     return new Map<string, string>();
   }
+}
+
+async function folderTotalSize(ops: Ops, rules: RegExp[], remotePath: string, depth = 0): Promise<number> {
+  if (depth > 6) return 0;
+  const entries = await ops.list(remotePath);
+  let total = 0;
+  for (const entry of entries.filter((item) => !isHidden(item.name, rules))) {
+    const nextPath = path.posix.join(remotePath, entry.name);
+    if (entry.type === "file") {
+      total += Number(entry.size || 0);
+      continue;
+    }
+    total += await folderTotalSize(ops, rules, nextPath, depth + 1).catch(() => 0);
+  }
+  return total;
+}
+
+export async function listWiiGameSelectorEntries(category: CategoryWithSource) {
+  if (!category.source) throw new Error("This download category is not mapped to a source.");
+  const rules = await hideRegexes();
+  return withClient(category.source, async (ops) => {
+    const dir = safeResolve(category.remotePath, "");
+    const entries = await ops.list(dir);
+    const covers = await coverMap(ops, category.coverPath);
+    const folders = entries.filter((entry) => entry.type === "dir" && !isHidden(entry.name, rules));
+    const out: WiiGameSelectorEntry[] = [];
+
+    for (const folder of folders) {
+      const code = downloadFolderCode(folder.name);
+      const remotePath = path.posix.join(dir, folder.name);
+      const sizeBytes = await folderTotalSize(ops, rules, remotePath).catch(() => 0);
+      const coverFile = code ? covers.get(code.toLowerCase()) : undefined;
+      out.push({
+        name: folder.name,
+        code,
+        path: folder.name,
+        sizeBytes,
+        coverFile,
+        coverSource: coverFile ? "cover" : undefined,
+      });
+    }
+
+    return out.sort((a, b) => a.name.localeCompare(b.name));
+  });
 }
 
 export async function listDownloadEntries(category: CategoryWithSource, subPath: string) {
@@ -213,6 +270,18 @@ export async function listDownloadEntries(category: CategoryWithSource, subPath:
     }
 
     return out.sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === "dir" ? -1 : 1));
+  });
+}
+
+export async function findDownloadFolderCover(category: CategoryWithSource, subPath: string) {
+  if (!category.source || !category.coverPath || !subPath) return null;
+  return withClient(category.source, async (ops) => {
+    const folderName = path.posix.basename(normalizeRemotePath(subPath).replace(/\/+$/g, ""));
+    const key = folderCoverKey(folderName);
+    if (!key) return null;
+    const covers = await coverMap(ops, category.coverPath);
+    const coverFile = covers.get(key);
+    return coverFile ? { file: coverFile, source: "cover" as const } : null;
   });
 }
 

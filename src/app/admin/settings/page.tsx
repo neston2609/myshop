@@ -81,6 +81,36 @@ export default async function AdminSettingsPage() {
           </div>
           <div className="grid gap-3 border-t border-black/10 pt-4">
             <div>
+              <h3 className="text-sm font-semibold">Nintendo Wii Game Selector</h3>
+              <p className="mt-1 text-xs text-slate-500">Set the allowed total size range for customer-generated .sel files.</p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="grid gap-1 text-sm font-medium">
+                Minimum size (GB)
+                <input
+                  name="wiiSelectorMinSizeGb"
+                  defaultValue={site?.wiiSelectorMinSizeGb?.toString() || "35"}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="h-10 rounded-md border border-black/10 px-3 font-normal"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-medium">
+                Maximum size (GB)
+                <input
+                  name="wiiSelectorMaxSizeGb"
+                  defaultValue={site?.wiiSelectorMaxSizeGb?.toString() || "44.5"}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="h-10 rounded-md border border-black/10 px-3 font-normal"
+                />
+              </label>
+            </div>
+          </div>
+          <div className="grid gap-3 border-t border-black/10 pt-4">
+            <div>
               <h3 className="text-sm font-semibold">LINE live chat</h3>
               <p className="mt-1 text-xs text-slate-500">Show a floating chat button on every page and optionally notify your LINE admin when a customer starts from a product page.</p>
               <p className="mt-2 rounded-md border border-black/10 bg-slate-50 px-3 py-2 text-xs text-slate-600">

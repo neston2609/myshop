@@ -914,6 +914,8 @@ export async function saveSiteSettingsAction(formData: FormData) {
     orderNotificationEmail: input.orderNotificationEmail || null,
     remoteAreaFee: input.remoteAreaFee,
     remotePostalCodes: normalizePostalCodes(input.remotePostalCodes || ""),
+    wiiSelectorMinSizeGb: input.wiiSelectorMinSizeGb,
+    wiiSelectorMaxSizeGb: input.wiiSelectorMaxSizeGb,
     liveChatEnabled: input.liveChatEnabled,
     liveChatRetentionDays: input.liveChatRetentionDays,
     lineOaId: input.lineOaId.startsWith("@") ? input.lineOaId : `@${input.lineOaId}`,
@@ -932,6 +934,7 @@ export async function saveSiteSettingsAction(formData: FormData) {
   revalidatePath("/", "layout");
   revalidatePath("/");
   revalidatePath("/admin/settings");
+  revalidatePath("/wii-game-selector");
 }
 
 export async function saveShopDescriptionAction(formData: FormData) {

@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
+
 import Link from "next/link";
 import { useState } from "react";
 import { Download, FileText, Folder, Search } from "lucide-react";

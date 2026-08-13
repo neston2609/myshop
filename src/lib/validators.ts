@@ -198,6 +198,8 @@ export const siteSettingsSchema = z.object({
   orderNotificationEmail: z.string().email().optional().or(z.literal("")),
   remoteAreaFee: z.coerce.number().min(0).max(100000).default(50),
   remotePostalCodes: z.string().max(20000).optional(),
+  wiiSelectorMinSizeGb: z.coerce.number().min(0).max(1000).default(35),
+  wiiSelectorMaxSizeGb: z.coerce.number().min(0).max(1000).default(44.5),
   liveChatEnabled: z.coerce.boolean().default(false),
   liveChatRetentionDays: z.coerce.number().int().min(1).max(365).default(7),
   lineOaId: z.string().trim().min(2).max(80).default("@retroconsole1981"),
@@ -213,6 +215,9 @@ export const siteSettingsSchema = z.object({
     })
     .optional(),
   lineNotifyProductContext: z.coerce.boolean().default(false),
+}).refine((input) => input.wiiSelectorMaxSizeGb > input.wiiSelectorMinSizeGb, {
+  message: "Maximum Wii selector size must be greater than minimum size",
+  path: ["wiiSelectorMaxSizeGb"],
 });
 
 export const shopDescriptionSchema = z.object({

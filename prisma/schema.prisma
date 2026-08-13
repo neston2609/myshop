@@ -295,6 +295,8 @@ model SiteSettings {
   orderNotificationEmail      String?
   remoteAreaFee               Decimal  @default(50) @db.Decimal(10, 2)
   remotePostalCodes           String[] @default([])
+  wiiSelectorMinSizeGb        Decimal  @default(35) @db.Decimal(10, 2)
+  wiiSelectorMaxSizeGb        Decimal  @default(44.5) @db.Decimal(10, 2)
   liveChatEnabled             Boolean  @default(true)
   liveChatRetentionDays       Int      @default(7)
   lineOaId                    String   @default("@retroconsole1981")
