@@ -167,7 +167,9 @@ export function WiiGameSelector({
         type="button"
         onClick={downloadSelection}
         disabled={downloading || !isValid}
-        className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[var(--accent)] px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+        className={`inline-flex h-11 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${
+          isValid ? "border border-blue-600 bg-white text-blue-600 hover:bg-blue-50" : "bg-[var(--accent)] text-white"
+        }`}
       >
         <Download size={17} />
         {downloading ? "Preparing..." : "Download Game List"}
