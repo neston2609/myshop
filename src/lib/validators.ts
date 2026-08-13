@@ -207,6 +207,35 @@ export const siteSettingsSchema = z.object({
   lineNotifyProductContext: z.coerce.boolean().default(false),
 });
 
+export const shopDescriptionSchema = z.object({
+  shopDescriptionEyebrow: z.string().trim().min(2).max(80),
+  shopDescriptionTitle: z.string().trim().min(2).max(180),
+  shopDescriptionBody: z.string().trim().min(2).max(1200),
+  shopDescriptionFaqs: z
+    .string()
+    .max(20000)
+    .transform((value, context) => {
+      try {
+        const parsed: unknown = JSON.parse(value);
+        const result = z
+          .array(
+            z.object({
+              question: z.string().trim().min(2).max(160),
+              answer: z.string().trim().min(2).max(1000),
+            }),
+          )
+          .min(1)
+          .max(12)
+          .safeParse(parsed);
+        if (result.success) return JSON.stringify(result.data);
+      } catch {
+        // The validation issue below also covers malformed JSON.
+      }
+      context.addIssue({ code: "custom", message: "Add between 1 and 12 complete questions and answers." });
+      return z.NEVER;
+    }),
+});
+
 export const downloadSourceSchema = z.object({
   name: z.string().trim().min(2).max(100),
   protocol: z.enum(["sftp", "ftp", "ftps"]).default("sftp"),

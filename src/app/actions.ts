@@ -34,6 +34,7 @@ import {
   registerSchema,
   resetPasswordSchema,
   shippingSchema,
+  shopDescriptionSchema,
   siteSettingsSchema,
   smtpSchema,
 } from "@/lib/validators";
@@ -874,6 +875,24 @@ export async function saveSiteSettingsAction(formData: FormData) {
   revalidatePath("/", "layout");
   revalidatePath("/");
   revalidatePath("/admin/settings");
+}
+
+export async function saveShopDescriptionAction(formData: FormData) {
+  await requireAdmin();
+  const input = shopDescriptionSchema.parse(Object.fromEntries(formData));
+  const current = await prisma.siteSettings.findFirst({ select: { id: true } });
+  const data = {
+    shopDescriptionEyebrow: input.shopDescriptionEyebrow,
+    shopDescriptionTitle: input.shopDescriptionTitle,
+    shopDescriptionBody: input.shopDescriptionBody,
+    shopDescriptionFaqs: input.shopDescriptionFaqs,
+  };
+
+  if (current) await prisma.siteSettings.update({ where: { id: current.id }, data });
+  else await prisma.siteSettings.create({ data });
+
+  revalidatePath("/");
+  revalidatePath("/admin/shop-description");
 }
 
 export async function saveDownloadSourceAction(formData: FormData) {

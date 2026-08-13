@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/site-header";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { absoluteUrl, defaultSeoDescription, defaultSeoTitle, seoBrandName } from "@/lib/seo";
+import { parseShopDescriptionFaqs } from "@/lib/shop-description";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,9 @@ export default async function Home() {
     { ...defaultFeatures[1], title: settings?.featureTwoTitle || defaultFeatures[1].title, body: settings?.featureTwoBody || defaultFeatures[1].body },
     { ...defaultFeatures[2], title: settings?.featureThreeTitle || defaultFeatures[2].title, body: settings?.featureThreeBody || defaultFeatures[2].body },
   ];
+  const shopDescriptionFaqs = settings?.shopDescriptionFaqs
+    ? parseShopDescriptionFaqs(settings.shopDescriptionFaqs)
+    : seoFaqs;
 
   return (
     <>
@@ -97,7 +101,7 @@ export default async function Home() {
           {
             "@context": "https://schema.org",
             "@type": "FAQPage",
-            mainEntity: seoFaqs.map((item) => ({
+            mainEntity: shopDescriptionFaqs.map((item) => ({
               "@type": "Question",
               name: item.question,
               acceptedAnswer: {
@@ -208,14 +212,18 @@ export default async function Home() {
         <section className="border-t border-[var(--border)] bg-[var(--surface)]">
           <div className="container-shell grid gap-8 py-12 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Japan Toy Shop</p>
-              <h2 className="mt-2 text-3xl font-semibold text-[var(--text)]">ร้านของเล่นญี่ปุ่น POP MART และอาร์ตทอยสำหรับนักสะสมในไทย</h2>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
+                {settings?.shopDescriptionEyebrow || "Japan Toy Shop"}
+              </p>
+              <h2 className="mt-2 text-3xl font-semibold text-[var(--text)]">
+                {settings?.shopDescriptionTitle || "ร้านของเล่นญี่ปุ่น POP MART และอาร์ตทอยสำหรับนักสะสมในไทย"}
+              </h2>
               <p className="mt-4 leading-7 text-[var(--muted)]">
-                เลือกซื้อของเล่นญี่ปุ่น ฟิกเกอร์สะสม กล่องสุ่ม POP MART, Labubu, The Monsters และ Space Molly จากรายการสินค้าที่คัดมาให้ดูง่าย พร้อมรายละเอียด รูปภาพ และราคาชัดเจน เหมาะทั้งสำหรับสะสมเองและเลือกเป็นของขวัญ
+                {settings?.shopDescriptionBody || "เลือกซื้อของเล่นญี่ปุ่น ฟิกเกอร์สะสม กล่องสุ่ม POP MART, Labubu, The Monsters และ Space Molly จากรายการสินค้าที่คัดมาให้ดูง่าย พร้อมรายละเอียด รูปภาพ และราคาชัดเจน เหมาะทั้งสำหรับสะสมเองและเลือกเป็นของขวัญ"}
               </p>
             </div>
             <div className="grid gap-3">
-              {seoFaqs.map((item) => (
+              {shopDescriptionFaqs.map((item) => (
                 <details key={item.question} className="rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] p-4">
                   <summary className="cursor-pointer font-semibold text-[var(--text)]">{item.question}</summary>
                   <p className="mt-3 leading-7 text-[var(--muted)]">{item.answer}</p>
