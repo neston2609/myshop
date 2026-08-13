@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { WiiGameSelector } from "@/components/wii-game-selector";
 import { SiteHeader } from "@/components/site-header";
-import { listWiiGameSelectorEntries, type WiiGameSelectorEntry } from "@/lib/download-sources";
 import { prisma } from "@/lib/prisma";
 import { getWiiSelectorCategory, selectorAdminEmail, WII_SELECTOR_LINE_OA, wiiSelectorSizeLimits } from "@/lib/wii-game-selector";
 
@@ -14,16 +13,6 @@ export default async function WiiGameSelectorPage() {
   ]);
   const limits = wiiSelectorSizeLimits(settings);
   const adminEmail = selectorAdminEmail(settings);
-
-  let entries: WiiGameSelectorEntry[] = [];
-  let error = "";
-  if (category) {
-    try {
-      entries = await listWiiGameSelectorEntries(category);
-    } catch (err) {
-      error = err instanceof Error ? err.message : "Could not load Wii folders.";
-    }
-  }
 
   return (
     <>
@@ -45,13 +34,12 @@ export default async function WiiGameSelectorPage() {
           </p>
         ) : null}
 
-        {error ? <p className="mt-6 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-
-        {category && !error ? (
+        {category ? (
           <div className="mt-6">
             <WiiGameSelector
-              entries={entries}
+              entries={[]}
               categorySlug={category.slug}
+              loadUrl="/api/wii-game-selector/list"
               minSizeBytes={limits.minBytes}
               maxSizeBytes={limits.maxBytes}
               minSizeGb={limits.minGb}

@@ -3,12 +3,14 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useMemo, useState } from "react";
+import { useEffect } from "react";
 import { Download, Folder } from "lucide-react";
 import type { WiiGameSelectorEntry } from "@/lib/download-sources";
 
 type WiiGameSelectorProps = {
   entries: WiiGameSelectorEntry[];
   categorySlug: string;
+  loadUrl?: string;
   minSizeBytes: number;
   maxSizeBytes: number;
   minSizeGb: number;
@@ -36,6 +38,7 @@ function fileNameFromDisposition(value: string | null) {
 export function WiiGameSelector({
   entries,
   categorySlug,
+  loadUrl,
   minSizeBytes,
   maxSizeBytes,
   minSizeGb,
@@ -43,16 +46,43 @@ export function WiiGameSelector({
   adminEmail,
   lineOaId,
 }: WiiGameSelectorProps) {
+  const [gameEntries, setGameEntries] = useState(entries);
+  const [loadingList, setLoadingList] = useState(Boolean(loadUrl && entries.length === 0));
+  const [loadError, setLoadError] = useState("");
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
   const [downloading, setDownloading] = useState(false);
   const [message, setMessage] = useState("");
-  const entryMap = useMemo(() => new Map(entries.map((entry) => [entry.code, entry])), [entries]);
+  const entryMap = useMemo(() => new Map(gameEntries.map((entry) => [entry.code, entry])), [gameEntries]);
   const selectedEntries = selectedCodes.map((code) => entryMap.get(code)).filter(Boolean) as WiiGameSelectorEntry[];
   const selectedBytes = selectedEntries.reduce((sum, entry) => sum + entry.sizeBytes, 0);
   const remainingBytes = Math.max(0, maxSizeBytes - selectedBytes);
   const needBytes = Math.max(0, minSizeBytes - selectedBytes);
   const isValid = selectedCodes.length > 0 && selectedBytes >= minSizeBytes && selectedBytes <= maxSizeBytes;
   const isOver = selectedBytes > maxSizeBytes;
+
+  useEffect(() => {
+    if (!loadUrl || entries.length > 0) return;
+    let cancelled = false;
+    fetch(loadUrl, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(await response.text());
+        return response.json() as Promise<{ entries?: WiiGameSelectorEntry[]; categorySlug?: string }>;
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setGameEntries(data.entries || []);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setLoadError(error instanceof Error ? error.message : "ไม่สามารถโหลดรายชื่อเกมได้");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingList(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [entries.length, loadUrl]);
 
   function toggle(code: string, checked: boolean) {
     setMessage("");
@@ -124,6 +154,19 @@ export function WiiGameSelector({
         {message ? <p className="mt-4 rounded-md bg-[var(--accent-soft)] p-3 text-sm font-semibold text-[var(--text)]">{message}</p> : null}
       </section>
 
+      {loadingList ? (
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-6 text-[var(--muted)]">
+          กำลังโหลดรายชื่อเกมจาก FTPS กรุณารอสักครู่...
+        </div>
+      ) : null}
+
+      {loadError ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+          {loadError}
+        </div>
+      ) : null}
+
+      {!loadingList && !loadError ? (
       <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
         <div className="hidden grid-cols-[86px_minmax(280px,1fr)_120px_140px] border-b border-[var(--border)] bg-[var(--surface-soft)] px-4 py-3 text-sm font-semibold text-[var(--muted)] md:grid">
           <span>Cover</span>
@@ -131,7 +174,7 @@ export function WiiGameSelector({
           <span>Code</span>
           <span className="text-right">Size</span>
         </div>
-        {entries.map((entry) => {
+        {gameEntries.map((entry) => {
           const checked = selectedCodes.includes(entry.code);
           const disabled = !entry.code;
           const thumbParams = new URLSearchParams({ path: entry.coverFile || "", source: entry.coverSource || "cover" });
@@ -173,8 +216,9 @@ export function WiiGameSelector({
             </label>
           );
         })}
-        {entries.length === 0 ? <p className="p-6 text-[var(--muted)]">ยังไม่มี folder ใน category นี้</p> : null}
+        {gameEntries.length === 0 ? <p className="p-6 text-[var(--muted)]">ยังไม่มี folder ใน category นี้</p> : null}
       </div>
+      ) : null}
 
       <div className="flex justify-end">{renderDownloadButton()}</div>
     </div>
