@@ -188,6 +188,33 @@ body[data-theme="BLACK"] .text-\[\#0f766e\] {
   color: var(--accent) !important;
 }
 
+.live-chat-bubble-customer {
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+
+.live-chat-bubble-admin {
+  background: #06c755;
+  color: #ffffff;
+}
+
+.live-chat-bubble-label {
+  color: currentColor;
+  opacity: 0.78;
+}
+
+body[data-theme="BLACK"] .live-chat-bubble-customer {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: #000000;
+  color: #ffffff;
+}
+
+body[data-theme="BLACK"] .live-chat-bubble-admin {
+  background: #facc15;
+  color: #111111;
+}
+
 button:disabled {
   cursor: not-allowed;
 }

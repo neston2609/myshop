@@ -182,12 +182,12 @@ export function LiveChatWidget({ enabled, lineOaId, prompt }: LiveChatWidgetProp
                 <div
                   key={item.id || `${item.role}-${index}`}
                   className={item.role === "customer"
-                    ? "ml-8 rounded-lg bg-[#06c755] px-3 py-2 text-sm text-white"
+                    ? "live-chat-bubble-customer ml-8 rounded-lg px-3 py-2 text-sm"
                     : item.role === "admin"
-                      ? "mr-8 rounded-lg bg-[var(--accent-soft)] px-3 py-2 text-sm text-[var(--text)]"
+                      ? "live-chat-bubble-admin mr-8 rounded-lg px-3 py-2 text-sm"
                       : "mr-8 rounded-lg border border-[var(--border)] bg-[var(--surface-soft)] px-3 py-2 text-sm text-[var(--text)]"}
                 >
-                  {item.role === "admin" ? <span className="mb-1 block text-xs font-semibold text-[var(--accent)]">ร้านค้า</span> : null}
+                  {item.role === "admin" ? <span className="live-chat-bubble-label mb-1 block text-xs font-semibold">ร้านค้า</span> : null}
                   {item.text}
                 </div>
               ))}

@@ -167,7 +167,7 @@ export function AdminLiveChatPanel({ initialConversations }: { initialConversati
             </div>
             <div className="grid max-h-[58vh] gap-3 overflow-y-auto bg-slate-50 p-4">
               {selected.messages.map((item) => (
-                <div key={item.id} className={item.sender === "ADMIN" ? "ml-auto max-w-[78%] rounded-lg bg-[#06c755] px-3 py-2 text-sm text-white" : "mr-auto max-w-[78%] rounded-lg border border-black/10 bg-white px-3 py-2 text-sm text-slate-800"}>
+                <div key={item.id} className={item.sender === "ADMIN" ? "live-chat-bubble-admin ml-auto max-w-[78%] rounded-lg px-3 py-2 text-sm" : "live-chat-bubble-customer mr-auto max-w-[78%] rounded-lg px-3 py-2 text-sm"}>
                   <div className="mb-1 flex items-center justify-between gap-3 text-[11px] opacity-75">
                     <span>{item.sender === "ADMIN" ? "Admin" : "Customer"} via {item.source}</span>
                     <span>{formatTime(item.createdAt)}</span>
