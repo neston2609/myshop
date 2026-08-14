@@ -49,6 +49,7 @@ export function CheckoutForm({
   savedAddress,
   cartItems,
   subtotal,
+  discount,
   shippingMethods,
   paymentMethods,
   settings,
@@ -56,6 +57,7 @@ export function CheckoutForm({
   savedAddress: SavedAddress;
   cartItems: CartItem[];
   subtotal: number;
+  discount: { code: string; amount: number } | null;
   shippingMethods: ShippingOption[];
   paymentMethods: PaymentOption[];
   settings: PricingSettings;
@@ -70,16 +72,18 @@ export function CheckoutForm({
   const cartIsEmpty = cartItems.length === 0;
   const pricing = useMemo(() => {
     if (!selectedShipping) {
-      return { baseShipping: 0, remoteAreaFee: 0, shippingCost: 0, isRemoteArea: false, paymentFee: 0, total: subtotal };
+      const discountTotal = discount?.amount || 0;
+      return { baseShipping: 0, remoteAreaFee: 0, shippingCost: 0, isRemoteArea: false, paymentFee: 0, discountTotal, discountedSubtotal: subtotal - discountTotal, total: subtotal - discountTotal };
     }
     return calculateCheckoutTotal({
       subtotal,
+      discountTotal: discount?.amount || 0,
       shippingMethod: selectedShipping,
       paymentMethod: selectedPayment,
       postalCode,
       settings,
     });
-  }, [postalCode, selectedPayment, selectedShipping, settings, subtotal]);
+  }, [discount, postalCode, selectedPayment, selectedShipping, settings, subtotal]);
 
   function handleEmptyCart() {
     window.alert("ไม่มีสินค้าในตะกร้า กรุณาเลือกสินค้าก่อนทำรายการ");
@@ -185,6 +189,12 @@ export function CheckoutForm({
         </div>
         <div className="mt-5 space-y-2 border-t border-black/10 pt-4 text-sm">
           <div className="flex justify-between"><span>ราคาสินค้า</span><strong>{money(subtotal)}</strong></div>
+          {discount ? (
+            <div className="flex justify-between text-emerald-700">
+              <span>ส่วนลด ({discount.code})</span>
+              <strong>-{money(pricing.discountTotal)}</strong>
+            </div>
+          ) : null}
           <div className="flex justify-between"><span>ค่าส่ง</span><strong>{money(pricing.baseShipping)}</strong></div>
           {pricing.remoteAreaFee > 0 ? <div className="flex justify-between text-amber-700"><span>พื้นที่ห่างไกล/พิเศษ</span><strong>{money(pricing.remoteAreaFee)}</strong></div> : null}
           {pricing.paymentFee > 0 ? <div className="flex justify-between"><span>ค่าธรรมเนียมจ่ายเงิน</span><strong>{money(pricing.paymentFee)}</strong></div> : null}

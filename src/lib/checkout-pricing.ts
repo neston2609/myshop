@@ -52,16 +52,21 @@ export function calculatePaymentFee(subtotal: number, paymentMethod?: PricingPay
 
 export function calculateCheckoutTotal(params: {
   subtotal: number;
+  discountTotal?: number;
   shippingMethod: PricingShippingMethod;
   paymentMethod?: PricingPaymentMethod | null;
   postalCode: string;
   settings: PricingSettings;
 }) {
   const shipping = calculateShippingCost(params);
-  const paymentFee = calculatePaymentFee(params.subtotal, params.paymentMethod);
+  const discountTotal = Math.min(params.subtotal, Math.max(0, Number(params.discountTotal || 0)));
+  const discountedSubtotal = params.subtotal - discountTotal;
+  const paymentFee = calculatePaymentFee(discountedSubtotal, params.paymentMethod);
   return {
     ...shipping,
+    discountTotal,
+    discountedSubtotal,
     paymentFee,
-    total: params.subtotal + shipping.shippingCost + paymentFee,
+    total: discountedSubtotal + shipping.shippingCost + paymentFee,
   };
 }

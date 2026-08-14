@@ -83,6 +83,25 @@ export const categorySchema = z.object({
   active: z.coerce.boolean().default(true),
 });
 
+export const discountCodeSchema = z.object({
+  code: z.string().trim().min(2).max(40).regex(/^[A-Za-z0-9_-]+$/),
+  description: z.string().trim().max(240).optional(),
+  type: z.enum(["PERCENT", "FIXED"]),
+  value: z.coerce.number().positive().max(1000000),
+  minimumSubtotal: z.union([z.coerce.number().min(0).max(10000000), z.literal("")]).optional(),
+  maximumDiscount: z.union([z.coerce.number().positive().max(10000000), z.literal("")]).optional(),
+  expiresAt: z.string().trim().optional(),
+  active: z.coerce.boolean().default(false),
+  isPublic: z.coerce.boolean().default(false),
+}).superRefine((input, context) => {
+  if (input.type === "PERCENT" && input.value > 100) {
+    context.addIssue({ code: "custom", path: ["value"], message: "Percentage must not exceed 100." });
+  }
+  if (input.expiresAt && Number.isNaN(new Date(input.expiresAt).getTime())) {
+    context.addIssue({ code: "custom", path: ["expiresAt"], message: "Invalid expiration date." });
+  }
+});
+
 export const subCategorySchema = z.object({
   name: z.string().trim().min(2).max(100),
   description: z.string().trim().max(240).optional(),

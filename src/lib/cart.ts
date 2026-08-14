@@ -53,6 +53,7 @@ export async function updateCartItem(productId: string, quantity: number) {
 export async function clearCart() {
   const store = await cookies();
   store.delete(cartCookie);
+  store.delete("myshop_discount_code");
 }
 
 export async function getCart() {
