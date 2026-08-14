@@ -9,9 +9,9 @@ import { absoluteUrl, siteUrl } from "@/lib/seo";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const sarabunRegular = join(process.cwd(), "public", "fonts", "sarabun-thai-400-normal.woff");
-const sarabunBold = join(process.cwd(), "public", "fonts", "sarabun-thai-700-normal.woff");
-const sarabunExtraBold = join(process.cwd(), "public", "fonts", "sarabun-thai-800-normal.woff");
+const sarabunRegular = join(process.cwd(), "public", "fonts", "Sarabun-Regular.ttf");
+const sarabunBold = join(process.cwd(), "public", "fonts", "Sarabun-Bold.ttf");
+const sarabunExtraBold = join(process.cwd(), "public", "fonts", "Sarabun-ExtraBold.ttf");
 
 function formatDate(value: Date | null) {
   if (!value) return "ไม่มีวันหมดอายุ";
