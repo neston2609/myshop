@@ -26,7 +26,8 @@ function wrapText(value: string, maxLength: number, maxLines = 4) {
   const normalized = value.replace(/\s+/g, " ").trim();
   if (!normalized) return [];
 
-  const words = normalized.includes(" ") ? normalized.split(" ") : normalized.match(new RegExp(`.{1,${maxLength}}`, "g")) || [];
+  const words = (normalized.includes(" ") ? normalized.split(" ") : [normalized])
+    .flatMap((word) => word.length > maxLength ? word.match(new RegExp(`.{1,${maxLength}}`, "g")) || [] : [word]);
   const lines: string[] = [];
   let consumed = 0;
 
@@ -88,6 +89,14 @@ function drawRoundBox(doc: PDFKit.PDFDocument, x: number, y: number, width: numb
   doc.restore();
 }
 
+function fitFontSize(doc: PDFKit.PDFDocument, text: string, fontName: string, maxWidth: number, preferred: number, minimum: number) {
+  for (let size = preferred; size >= minimum; size -= 1) {
+    doc.font(fontName).fontSize(size);
+    if (doc.widthOfString(text) <= maxWidth) return size;
+  }
+  return minimum;
+}
+
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (session?.role !== "ADMIN") {
@@ -136,7 +145,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   const minimumText = discount.minimumSubtotal ? `เมื่อซื้อครบ ${money(discount.minimumSubtotal)}` : "ไม่มีขั้นต่ำการสั่งซื้อ";
   const maximumText = discount.maximumDiscount ? `ส่วนลดสูงสุด ${money(discount.maximumDiscount)}` : "ไม่จำกัดส่วนลดสูงสุด";
   const expiryText = `ใช้ได้ถึง ${formatDate(discount.expiresAt)}`;
-  const descriptionLines = wrapText(discount.description || "สแกน QR เพื่อเลือกซื้อสินค้า แล้วใช้โค้ดส่วนลดนี้ตอนชำระเงิน", 38, 4);
+  const descriptionLines = wrapText(discount.description || "สแกน QR เพื่อเลือกซื้อสินค้า แล้วใช้โค้ดส่วนลดนี้ตอนชำระเงิน", 28, 3);
   const issuedAt = new Intl.DateTimeFormat("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "medium" }).format(new Date());
 
   const doc = new PDFDocument({
@@ -184,19 +193,19 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     .text("SPECIAL OFFER", cardX + 24, cardY + 82, { width: cardW - 48, align: "center" });
   doc
     .font("SarabunBold")
-    .fontSize(22)
+    .fontSize(fitFontSize(doc, valueText, "SarabunBold", cardW - 70, 22, 15))
     .fillColor("#fff4aa")
-    .text(valueText, cardX + 24, cardY + 122, { width: cardW - 48, align: "center" });
+    .text(valueText, cardX + 24, cardY + 122, { width: cardW - 48, align: "center", lineBreak: false });
   doc
     .font("Sarabun")
-    .fontSize(14)
+    .fontSize(fitFontSize(doc, minimumText, "Sarabun", cardW - 70, 14, 10))
     .fillColor("#e4eee8")
-    .text(minimumText, cardX + 24, cardY + 150, { width: cardW - 48, align: "center" });
+    .text(minimumText, cardX + 24, cardY + 150, { width: cardW - 48, align: "center", lineBreak: false });
   doc
     .font("Sarabun")
-    .fontSize(12)
+    .fontSize(fitFontSize(doc, maximumText, "Sarabun", cardW - 70, 12, 9))
     .fillColor("#e4eee8")
-    .text(maximumText, cardX + 24, cardY + 168, { width: cardW - 48, align: "center" });
+    .text(maximumText, cardX + 24, cardY + 168, { width: cardW - 48, align: "center", lineBreak: false });
 
   const logoX = cardX + margin;
   const logoY = cardY + 214;
@@ -215,10 +224,10 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
 
   const detailX = logoX + logoSize + 20;
   const detailW = cardX + cardW - margin - detailX;
-  const codeFontSize = discount.code.length > 10 ? 22 : discount.code.length > 7 ? 26 : 31;
+  const codeFontSize = fitFontSize(doc, discount.code, "SarabunExtraBold", detailW - 32, 31, 13);
   drawRoundBox(doc, detailX, logoY, detailW, 98, 10, "#ffffff", "#d7ddd4");
   doc.font("SarabunBold").fontSize(13).fillColor("#526158").text("Discount code", detailX + 16, logoY + 15);
-  doc.font("SarabunExtraBold").fontSize(codeFontSize).fillColor("#15211b").text(discount.code, detailX + 16, logoY + 39, { width: detailW - 32, align: "center" });
+  doc.font("SarabunExtraBold").fontSize(codeFontSize).fillColor("#15211b").text(discount.code, detailX + 16, logoY + 39, { width: detailW - 32, align: "center", lineBreak: false });
   doc.font("Sarabun").fontSize(11).fillColor("#69776e").text(expiryText, detailX + 16, logoY + 75, { width: detailW - 32, align: "center" });
 
   drawRoundBox(doc, detailX, logoY + 114, detailW, 92, 10, "#fff8c9", "#e8d76e");
