@@ -17,18 +17,20 @@ function DiscountFields({ code }: { code?: Awaited<ReturnType<typeof prisma.disc
       {code ? <input type="hidden" name="id" value={code.id} /> : null}
       <input name="code" defaultValue={code?.code || ""} placeholder="Code, e.g. WELCOME10" required className="h-10 rounded-md border border-black/10 bg-white px-3 uppercase" />
       <input name="description" defaultValue={code?.description || ""} placeholder="Promotion description" className="h-10 rounded-md border border-black/10 bg-white px-3" />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="grid gap-1 text-sm font-medium">
-          Discount type
-          <select name="type" defaultValue={code?.type || "PERCENT"} className="h-10 rounded-md border border-black/10 bg-white px-3 font-normal">
-            <option value="PERCENT">Percent (%)</option>
-            <option value="FIXED">Fixed amount (THB)</option>
-          </select>
-        </label>
-        <label className="grid gap-1 text-sm font-medium">
-          Discount value
-          <input name="value" defaultValue={code?.value.toString() || ""} type="number" min="0.01" step="0.01" required className="h-10 rounded-md border border-black/10 bg-white px-3 font-normal" />
-        </label>
+      <div className="grid gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm font-medium">
+            Discount type
+            <select name="type" defaultValue={code?.type || "PERCENT"} className="h-10 rounded-md border border-black/10 bg-white px-3 font-normal">
+              <option value="PERCENT">Percent (%)</option>
+              <option value="FIXED">Fixed amount (THB)</option>
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            Discount value
+            <input name="value" defaultValue={code?.value.toString() || ""} type="number" min="0.01" step="0.01" required className="h-10 rounded-md border border-black/10 bg-white px-3 font-normal" />
+          </label>
+        </div>
         <label className="grid gap-1 text-sm font-medium">
           Minimum purchase (optional)
           <input name="minimumSubtotal" defaultValue={code?.minimumSubtotal?.toString() || ""} type="number" min="0" step="0.01" className="h-10 rounded-md border border-black/10 bg-white px-3 font-normal" />
@@ -77,10 +79,20 @@ export default async function AdminDiscountCodesPage({ searchParams }: AdminDisc
                     <DiscountFields code={code} />
                     <button className="h-10 rounded-md bg-[#17201c] font-semibold text-white">Save changes</button>
                   </form>
-                  <form action={deleteDiscountCodeAction}>
-                    <input type="hidden" name="id" value={code.id} />
-                    <button className="h-10 rounded-md border border-red-200 bg-red-50 px-4 font-semibold text-red-700">Delete code</button>
-                  </form>
+                  <div className="flex flex-wrap gap-3">
+                    <a
+                      href={`/api/admin/discount-codes/${code.id}/brochure`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-10 items-center justify-center rounded-md border border-[#0f766e]/25 bg-white px-4 font-semibold text-[#0f766e] transition hover:-translate-y-0.5 hover:border-[#0f766e]/50 hover:shadow-sm active:translate-y-0"
+                    >
+                      Generate brochure
+                    </a>
+                    <form action={deleteDiscountCodeAction}>
+                      <input type="hidden" name="id" value={code.id} />
+                      <button className="h-10 rounded-md border border-red-200 bg-red-50 px-4 font-semibold text-red-700">Delete code</button>
+                    </form>
+                  </div>
                 </div>
               </details>
             );
@@ -92,6 +104,7 @@ export default async function AdminDiscountCodesPage({ searchParams }: AdminDisc
         <h2 className="font-semibold">Create discount code</h2>
         <DiscountFields />
         <button className="h-10 rounded-md bg-[#17201c] font-semibold text-white">Create code</button>
+        <p className="text-xs leading-5 text-slate-500">Save the code first, then open it from the list to generate an A5 brochure with the discount details.</p>
       </form>
     </div>
   );
