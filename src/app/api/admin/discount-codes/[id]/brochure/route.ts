@@ -229,18 +229,18 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   });
 
   const qrX = cardX + 62;
-  const qrY = cardY + 408;
+  const qrY = cardY + 386;
   drawRoundBox(doc, qrX - 14, qrY - 14, 128, 128, 10, "#ffffff", "#d7ddd4");
   doc.image(qrBuffer, qrX, qrY, { width: 100, height: 100 });
 
   const stepsX = detailX;
-  const stepsY = cardY + 450;
-  drawRoundBox(doc, stepsX, stepsY, detailW, 92, 10, "#ffffff", "#d7ddd4");
+  const stepsY = cardY + 428;
+  drawRoundBox(doc, stepsX, stepsY, detailW, 82, 10, "#ffffff", "#d7ddd4");
   doc.font("SarabunBold").fontSize(14).fillColor("#15211b").text("วิธีใช้งาน", stepsX + 16, stepsY + 12);
   doc.font("Sarabun").fontSize(10.5).fillColor("#253d32");
   doc.text("1. สแกน QR เพื่อเข้าร้านค้า", stepsX + 16, stepsY + 35, { width: detailW - 32 });
   doc.text("2. เลือกสินค้าที่ต้องการ", stepsX + 16, stepsY + 51, { width: detailW - 32 });
-  doc.text(`3. ใส่โค้ด ${discount.code} ตอนชำระเงิน`, stepsX + 16, stepsY + 67, { width: detailW - 32 });
+  doc.text(`3. ใช้โค้ด ${discount.code}`, stepsX + 16, stepsY + 67, { width: detailW - 32 });
 
   const footerY = pageHeight - 40;
   doc.moveTo(cardX + margin, footerY - 10).lineTo(cardX + cardW - margin, footerY - 10).lineWidth(1).strokeColor("#d7ddd4").stroke();
