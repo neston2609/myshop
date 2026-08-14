@@ -18,19 +18,17 @@ function DiscountFields({ code }: { code?: Awaited<ReturnType<typeof prisma.disc
       <input name="code" defaultValue={code?.code || ""} placeholder="Code, e.g. WELCOME10" required className="h-10 rounded-md border border-black/10 bg-white px-3 uppercase" />
       <input name="description" defaultValue={code?.description || ""} placeholder="Promotion description" className="h-10 rounded-md border border-black/10 bg-white px-3" />
       <div className="grid gap-3">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1 text-sm font-medium">
-            Discount type
-            <select name="type" defaultValue={code?.type || "PERCENT"} className="h-10 rounded-md border border-black/10 bg-white px-3 font-normal">
-              <option value="PERCENT">Percent (%)</option>
-              <option value="FIXED">Fixed amount (THB)</option>
-            </select>
-          </label>
-          <label className="grid gap-1 text-sm font-medium">
-            Discount value
-            <input name="value" defaultValue={code?.value.toString() || ""} type="number" min="0.01" step="0.01" required className="h-10 rounded-md border border-black/10 bg-white px-3 font-normal" />
-          </label>
-        </div>
+        <label className="grid gap-1 text-sm font-medium">
+          Discount type
+          <select name="type" defaultValue={code?.type || "PERCENT"} className="h-10 rounded-md border border-black/10 bg-white px-3 font-normal">
+            <option value="PERCENT">Percent (%)</option>
+            <option value="FIXED">Fixed amount (THB)</option>
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm font-medium">
+          Discount value
+          <input name="value" defaultValue={code?.value.toString() || ""} type="number" min="0.01" step="0.01" required className="h-10 rounded-md border border-black/10 bg-white px-3 font-normal" />
+        </label>
         <label className="grid gap-1 text-sm font-medium">
           Minimum purchase (optional)
           <input name="minimumSubtotal" defaultValue={code?.minimumSubtotal?.toString() || ""} type="number" min="0" step="0.01" className="h-10 rounded-md border border-black/10 bg-white px-3 font-normal" />
