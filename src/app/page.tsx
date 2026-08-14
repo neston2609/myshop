@@ -4,8 +4,10 @@ import Link from "next/link";
 import { ArrowRight, CornerDownRight, Package, ShieldCheck, Sparkles, Truck } from "lucide-react";
 import { JsonLd } from "@/components/json-ld";
 import { ProductCard } from "@/components/product-card";
+import { CopyDiscountCodeButton } from "@/components/copy-discount-code-button";
 import { SiteHeader } from "@/components/site-header";
 import { getSession } from "@/lib/auth";
+import { money } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { absoluteUrl, defaultSeoDescription, defaultSeoTitle, seoBrandName } from "@/lib/seo";
 import { parseShopDescriptionFaqs } from "@/lib/shop-description";
@@ -54,7 +56,7 @@ const seoFaqs = [
 ];
 
 export default async function Home() {
-  const [products, categories, settings, session] = await Promise.all([
+  const [products, categories, settings, session, publicDiscountCodes] = await Promise.all([
     prisma.product.findMany({
       where: { active: true, recommendedPosition: { not: null } },
       take: 8,
@@ -75,6 +77,15 @@ export default async function Home() {
     }),
     prisma.siteSettings.findFirst(),
     getSession(),
+    prisma.discountCode.findMany({
+      where: {
+        active: true,
+        isPublic: true,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+    }),
   ]);
   const hero = {
     eyebrow: settings?.heroEyebrow || defaultHero.eyebrow,
@@ -212,6 +223,40 @@ export default async function Home() {
             );
           })}
         </section>
+        {publicDiscountCodes.length ? (
+          <section className="container-shell pb-12">
+            <div className="mb-5">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Promotion</p>
+              <h2 className="mt-2 text-3xl font-semibold text-[var(--text)]">Discount codes</h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {publicDiscountCodes.map((discount) => {
+                const minimum = discount.minimumSubtotal ? Number(discount.minimumSubtotal) : null;
+                const maximum = discount.maximumDiscount ? Number(discount.maximumDiscount) : null;
+                return (
+                  <article key={discount.id} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">Public code</p>
+                        <h3 className="mt-1 text-2xl font-semibold text-[var(--text)]">{discount.code}</h3>
+                      </div>
+                      <span className="rounded-full bg-[var(--surface-soft)] px-3 py-1 text-sm font-semibold text-[var(--text)]">
+                        {discount.type === "PERCENT" ? `${Number(discount.value)}% OFF` : `${money(discount.value)} OFF`}
+                      </span>
+                    </div>
+                    {discount.description ? <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{discount.description}</p> : null}
+                    <div className="mt-3 space-y-1 text-xs text-[var(--muted)]">
+                      {minimum ? <p>Minimum purchase {money(minimum)}</p> : null}
+                      {maximum ? <p>Maximum discount {money(maximum)}</p> : null}
+                      {discount.expiresAt ? <p>Valid until {discount.expiresAt.toLocaleString("th-TH", { timeZone: "Asia/Bangkok", dateStyle: "medium", timeStyle: "short" })}</p> : null}
+                    </div>
+                    <div className="mt-4"><CopyDiscountCodeButton code={discount.code} /></div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
         <section className="container-shell space-y-6 pb-14">
           <div className="flex items-end justify-between gap-4">
             <div>

@@ -4,6 +4,7 @@ import { CheckoutForm } from "@/components/checkout-form";
 import { SiteHeader } from "@/components/site-header";
 import { getSession } from "@/lib/auth";
 import { getCart } from "@/lib/cart";
+import { getAppliedDiscount } from "@/lib/discount-codes";
 import { readPaymentCredentials } from "@/lib/payments";
 import { prisma } from "@/lib/prisma";
 
@@ -56,6 +57,7 @@ export default async function CheckoutPage() {
     getSession(),
     cookies(),
   ]);
+  const appliedDiscount = await getAppliedDiscount(cart.subtotal);
   const methodAccess = session?.role === "ADMIN" ? {} : { isTest: false };
   const [shippingMethods, paymentMethods, siteSettings] = await Promise.all([
     prisma.shippingMethod.findMany({ where: { enabled: true, ...methodAccess }, orderBy: { createdAt: "asc" } }),
@@ -104,6 +106,7 @@ export default async function CheckoutPage() {
           lineTotal: item.lineTotal,
         }))}
         subtotal={cart.subtotal}
+        discount={appliedDiscount.valid ? { code: appliedDiscount.code, amount: appliedDiscount.amount } : null}
         shippingMethods={shippingMethods.map((method) => ({
           id: method.id,
           name: method.name,

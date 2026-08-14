@@ -12,6 +12,7 @@ import { createSession, destroySession, findUserByEmail, findUserByIdentifier, g
 import { encryptSecret } from "@/lib/crypto";
 import { sanitizeProductHtml } from "@/lib/html";
 import { calculateCheckoutTotal, normalizePostalCodes } from "@/lib/checkout-pricing";
+import { discountCodeCookie, evaluateDiscountCode, getAppliedDiscount, normalizeDiscountCode } from "@/lib/discount-codes";
 import { sendOrderEmail } from "@/lib/order-email";
 import { buildPayPalCredentials, buildStripeCredentials, createPayPalOrder, createStripeCheckoutSession, readPaymentCredentials } from "@/lib/payments";
 import { prisma } from "@/lib/prisma";
@@ -25,6 +26,7 @@ import {
   downloadCategorySchema,
   downloadHideRuleSchema,
   downloadSourceSchema,
+  discountCodeSchema,
   forgotPasswordSchema,
   loginSchema,
   orderTrackingSchema,
@@ -155,6 +157,33 @@ export async function addToCartAction(formData: FormData) {
 export async function updateCartAction(formData: FormData) {
   await updateCartItem(formValue(formData, "productId"), Number(formData.get("quantity") || 0));
   revalidatePath("/cart");
+}
+
+export async function applyDiscountCodeAction(formData: FormData) {
+  const cart = await getCart();
+  const result = await evaluateDiscountCode(formValue(formData, "discountCode"), cart.subtotal);
+  if (!result.valid) {
+    const query = result.reason === "minimum" && "minimumSubtotal" in result
+      ? `?discount=${result.reason}&minimum=${result.minimumSubtotal}`
+      : `?discount=${result.reason}`;
+    redirect(`/cart${query}`);
+  }
+
+  const store = await cookies();
+  store.set(discountCodeCookie, result.code, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  });
+  redirect("/cart?discount=applied");
+}
+
+export async function removeDiscountCodeAction() {
+  const store = await cookies();
+  store.delete(discountCodeCookie);
+  redirect("/cart?discount=removed");
 }
 
 export async function registerAction(formData: FormData) {
@@ -296,6 +325,7 @@ export async function checkoutAction(formData: FormData) {
   const input = checkoutSchema.parse({ ...Object.fromEntries(formData), saveShippingAddress: formData.has("saveShippingAddress") });
   const cart = await getCart();
   if (cart.items.length === 0) redirect("/cart");
+  const appliedDiscount = await getAppliedDiscount(cart.subtotal);
 
   const session = await getSession();
   const methodAccess = session?.role === "ADMIN" ? {} : { isTest: false };
@@ -309,6 +339,7 @@ export async function checkoutAction(formData: FormData) {
 
   const pricing = calculateCheckoutTotal({
     subtotal: cart.subtotal,
+    discountTotal: appliedDiscount.valid ? appliedDiscount.amount : 0,
     shippingMethod: {
       cost: Number(shippingMethod.cost),
       freeShippingThreshold: shippingMethod.freeShippingThreshold ? Number(shippingMethod.freeShippingThreshold) : null,
@@ -339,6 +370,8 @@ export async function checkoutAction(formData: FormData) {
         shippingCost: pricing.shippingCost,
         remoteAreaFee: pricing.remoteAreaFee,
         paymentFee: pricing.paymentFee,
+        discountTotal: pricing.discountTotal,
+        discountCode: appliedDiscount.valid ? appliedDiscount.code : null,
         total: pricing.total,
         paymentStatus: paymentMethod.provider === "STRIPE" || paymentMethod.provider === "PAYPAL" ? "pending" : paymentMethod.provider === "BANK_TRANSFER" ? "awaiting_transfer" : "manual",
         shippingMethodId: shippingMethod.id,
@@ -380,6 +413,7 @@ export async function checkoutAction(formData: FormData) {
         total: pricing.total,
         shippingCost: pricing.shippingCost,
         paymentFee: pricing.paymentFee,
+        discountTotal: pricing.discountTotal,
         items: cart.items.map((item) => ({
           name: item.product.name,
           price: Number(item.product.price),
@@ -403,6 +437,7 @@ export async function checkoutAction(formData: FormData) {
         total: pricing.total,
         shippingCost: pricing.shippingCost,
         paymentFee: pricing.paymentFee,
+        discountTotal: pricing.discountTotal,
         items: cart.items.map((item) => ({
           name: item.product.name,
           price: Number(item.product.price),
@@ -443,6 +478,7 @@ export async function payOrderAction(formData: FormData) {
     total: Number(order.total),
     shippingCost: Number(order.shippingCost),
     paymentFee: Number(order.paymentFee),
+    discountTotal: Number(order.discountTotal),
     items: order.items.map((item) => ({
       name: item.name,
       price: Number(item.price),
@@ -769,6 +805,46 @@ export async function deleteSubCategoryAction(formData: FormData) {
   revalidatePath("/admin/categories");
   revalidatePath("/admin/products");
   if (subCategory) revalidatePath(`/categories/${subCategory.category.slug}`);
+}
+
+export async function saveDiscountCodeAction(formData: FormData) {
+  await requireAdmin();
+  const input = discountCodeSchema.parse({
+    ...Object.fromEntries(formData),
+    active: formData.has("active"),
+    isPublic: formData.has("isPublic"),
+  });
+  const id = formValue(formData, "id");
+  const code = normalizeDiscountCode(input.code);
+  const duplicate = await prisma.discountCode.findUnique({ where: { code }, select: { id: true } });
+  if (duplicate && duplicate.id !== id) redirect("/admin/discount-codes?message=code-exists");
+
+  const data = {
+    code,
+    description: input.description || null,
+    type: input.type,
+    value: input.value,
+    minimumSubtotal: input.minimumSubtotal === "" || input.minimumSubtotal == null ? null : input.minimumSubtotal,
+    maximumDiscount: input.maximumDiscount === "" || input.maximumDiscount == null ? null : input.maximumDiscount,
+    expiresAt: input.expiresAt ? new Date(`${input.expiresAt}:00+07:00`) : null,
+    active: input.active,
+    isPublic: input.isPublic,
+  };
+  if (id) await prisma.discountCode.update({ where: { id }, data });
+  else await prisma.discountCode.create({ data });
+
+  revalidatePath("/admin/discount-codes");
+  revalidatePath("/");
+  redirect("/admin/discount-codes?message=saved");
+}
+
+export async function deleteDiscountCodeAction(formData: FormData) {
+  await requireAdmin();
+  const id = formValue(formData, "id");
+  if (id) await prisma.discountCode.delete({ where: { id } });
+  revalidatePath("/admin/discount-codes");
+  revalidatePath("/");
+  redirect("/admin/discount-codes?message=deleted");
 }
 
 export async function saveShippingAction(formData: FormData) {
