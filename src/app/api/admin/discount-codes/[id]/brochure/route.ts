@@ -167,86 +167,86 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   doc.rect(0, 0, pageWidth, pageHeight).fill("#f5f7f3");
   drawRoundBox(doc, cardX, cardY, cardW, cardH, 12, "#ffffff", "#d7ddd4");
   drawRoundBox(doc, cardX + 8, cardY + 8, cardW - 16, cardH - 16, 10, "#f8faf6");
-  drawRoundBox(doc, cardX + 8, cardY + 8, cardW - 16, 164, 10, "#17251e");
+  drawRoundBox(doc, cardX + 8, cardY + 8, cardW - 16, 176, 10, "#17251e");
 
   doc.circle(pageWidth - 70, cardY + 52, 38).fill("#fff4aa");
-  doc.circle(cardX + 42, cardY + 162, 48).fillOpacity(0.18).fill("#e8f5ee").fillOpacity(1);
+  doc.circle(cardX + 42, cardY + 160, 48).fillOpacity(0.18).fill("#e8f5ee").fillOpacity(1);
 
   doc
     .font("SarabunBold")
-    .fontSize(15)
+    .fontSize(14)
     .fillColor("#fff4aa")
-    .text(shopName.toUpperCase(), cardX + 24, cardY + 42, { width: cardW - 48, align: "center", characterSpacing: 2 });
+    .text(shopName.toUpperCase(), cardX + 24, cardY + 54, { width: cardW - 48, align: "center", characterSpacing: 2 });
   doc
     .font("SarabunExtraBold")
-    .fontSize(43)
+    .fontSize(32)
     .fillColor("#ffffff")
-    .text("SPECIAL OFFER", cardX + 24, cardY + 73, { width: cardW - 48, align: "center" });
+    .text("SPECIAL OFFER", cardX + 24, cardY + 82, { width: cardW - 48, align: "center" });
   doc
     .font("SarabunBold")
-    .fontSize(27)
+    .fontSize(22)
     .fillColor("#fff4aa")
-    .text(valueText, cardX + 24, cardY + 123, { width: cardW - 48, align: "center" });
+    .text(valueText, cardX + 24, cardY + 122, { width: cardW - 48, align: "center" });
   doc
     .font("Sarabun")
-    .fontSize(17)
+    .fontSize(14)
     .fillColor("#e4eee8")
-    .text(minimumText, cardX + 24, cardY + 151, { width: cardW - 48, align: "center" });
+    .text(minimumText, cardX + 24, cardY + 150, { width: cardW - 48, align: "center" });
   doc
     .font("Sarabun")
-    .fontSize(15)
+    .fontSize(12)
     .fillColor("#e4eee8")
-    .text(maximumText, cardX + 24, cardY + 171, { width: cardW - 48, align: "center" });
+    .text(maximumText, cardX + 24, cardY + 168, { width: cardW - 48, align: "center" });
 
   const logoX = cardX + margin;
-  const logoY = cardY + 205;
-  const logoSize = 146;
+  const logoY = cardY + 214;
+  const logoSize = 128;
   if (logoBuffer) {
     try {
       doc.image(logoBuffer, logoX, logoY, { fit: [logoSize, logoSize], align: "center", valign: "center" });
     } catch {
       drawRoundBox(doc, logoX, logoY, logoSize, logoSize, 10, "#17251e");
-      doc.font("SarabunBold").fontSize(24).fillColor("#fff4aa").text(shopName, logoX + 12, logoY + 58, { width: logoSize - 24, align: "center" });
+      doc.font("SarabunBold").fontSize(20).fillColor("#fff4aa").text(shopName, logoX + 12, logoY + 50, { width: logoSize - 24, align: "center" });
     }
   } else {
     drawRoundBox(doc, logoX, logoY, logoSize, logoSize, 10, "#17251e");
-    doc.font("SarabunBold").fontSize(24).fillColor("#fff4aa").text(shopName, logoX + 12, logoY + 58, { width: logoSize - 24, align: "center" });
+    doc.font("SarabunBold").fontSize(20).fillColor("#fff4aa").text(shopName, logoX + 12, logoY + 50, { width: logoSize - 24, align: "center" });
   }
 
-  const detailX = logoX + logoSize + 18;
+  const detailX = logoX + logoSize + 20;
   const detailW = cardX + cardW - margin - detailX;
-  drawRoundBox(doc, detailX, logoY, detailW, 96, 10, "#ffffff", "#d7ddd4");
-  doc.font("SarabunBold").fontSize(14).fillColor("#526158").text("Discount code", detailX + 16, logoY + 18);
-  doc.font("SarabunExtraBold").fontSize(34).fillColor("#15211b").text(discount.code, detailX + 16, logoY + 39, { width: detailW - 32, align: "center" });
-  doc.font("Sarabun").fontSize(13).fillColor("#69776e").text(expiryText, detailX + 16, logoY + 77, { width: detailW - 32, align: "center" });
+  const codeFontSize = discount.code.length > 10 ? 22 : discount.code.length > 7 ? 26 : 31;
+  drawRoundBox(doc, detailX, logoY, detailW, 98, 10, "#ffffff", "#d7ddd4");
+  doc.font("SarabunBold").fontSize(13).fillColor("#526158").text("Discount code", detailX + 16, logoY + 15);
+  doc.font("SarabunExtraBold").fontSize(codeFontSize).fillColor("#15211b").text(discount.code, detailX + 16, logoY + 39, { width: detailW - 32, align: "center" });
+  doc.font("Sarabun").fontSize(11).fillColor("#69776e").text(expiryText, detailX + 16, logoY + 75, { width: detailW - 32, align: "center" });
 
-  drawRoundBox(doc, detailX, logoY + 112, detailW, 82, 10, "#fff8c9", "#e8d76e");
-  doc.font("SarabunBold").fontSize(16).fillColor("#15211b").text("รายละเอียดโปรโมชัน", detailX + 16, logoY + 126);
-  doc.font("Sarabun").fontSize(13).fillColor("#253d32");
+  drawRoundBox(doc, detailX, logoY + 114, detailW, 92, 10, "#fff8c9", "#e8d76e");
+  doc.font("SarabunBold").fontSize(15).fillColor("#15211b").text("รายละเอียดโปรโมชัน", detailX + 16, logoY + 130);
+  doc.font("Sarabun").fontSize(12).fillColor("#253d32");
   descriptionLines.forEach((line, index) => {
-    doc.text(line, detailX + 16, logoY + 150 + index * 15, { width: detailW - 32 });
+    doc.text(line, detailX + 16, logoY + 154 + index * 13, { width: detailW - 32 });
   });
 
   const qrX = cardX + 58;
-  const qrY = cardY + 382;
-  drawRoundBox(doc, qrX - 12, qrY - 12, 150, 150, 10, "#ffffff", "#d7ddd4");
-  doc.image(qrBuffer, qrX, qrY, { width: 126, height: 126 });
-  doc.font("SarabunBold").fontSize(16).fillColor("#15211b").text("Scan to shop", qrX - 12, qrY + 151, { width: 150, align: "center" });
-  doc.font("Sarabun").fontSize(11).fillColor("#69776e").text(shopLink.replace(/^https?:\/\//, ""), qrX - 22, qrY + 172, { width: 170, align: "center" });
+  const qrY = cardY + 390;
+  drawRoundBox(doc, qrX - 14, qrY - 14, 140, 140, 10, "#ffffff", "#d7ddd4");
+  doc.image(qrBuffer, qrX, qrY, { width: 112, height: 112 });
+  doc.font("SarabunBold").fontSize(14).fillColor("#15211b").text("Scan to shop", qrX - 14, qrY + 119, { width: 140, align: "center" });
 
   const stepsX = detailX;
-  const stepsY = cardY + 382;
-  drawRoundBox(doc, stepsX, stepsY, detailW, 120, 10, "#ffffff", "#d7ddd4");
-  doc.font("SarabunBold").fontSize(17).fillColor("#15211b").text("วิธีใช้งาน", stepsX + 16, stepsY + 18);
-  doc.font("Sarabun").fontSize(14).fillColor("#253d32");
-  doc.text("1. สแกน QR เพื่อเข้าร้านค้า", stepsX + 16, stepsY + 48, { width: detailW - 32 });
-  doc.text("2. เลือกสินค้าที่ต้องการ", stepsX + 16, stepsY + 68, { width: detailW - 32 });
-  doc.text(`3. ใส่โค้ด ${discount.code} ตอนชำระเงิน`, stepsX + 16, stepsY + 88, { width: detailW - 32 });
+  const stepsY = cardY + 404;
+  drawRoundBox(doc, stepsX, stepsY, detailW, 124, 10, "#ffffff", "#d7ddd4");
+  doc.font("SarabunBold").fontSize(16).fillColor("#15211b").text("วิธีใช้งาน", stepsX + 16, stepsY + 16);
+  doc.font("Sarabun").fontSize(12).fillColor("#253d32");
+  doc.text("1. สแกน QR เพื่อเข้าร้านค้า", stepsX + 16, stepsY + 44, { width: detailW - 32 });
+  doc.text("2. เลือกสินค้าที่ต้องการ", stepsX + 16, stepsY + 63, { width: detailW - 32 });
+  doc.text(`3. ใส่โค้ด ${discount.code} ตอนชำระเงิน`, stepsX + 16, stepsY + 82, { width: detailW - 32 });
 
-  const footerY = pageHeight - 54;
+  const footerY = pageHeight - 40;
   doc.moveTo(cardX + margin, footerY - 10).lineTo(cardX + cardW - margin, footerY - 10).lineWidth(1).strokeColor("#d7ddd4").stroke();
-  doc.font("Sarabun").fontSize(11).fillColor("#69776e").text(`ติดต่อร้าน: ${contactEmail} | LINE OA: ${lineOaId}`, cardX + margin, footerY, { width: cardW - 2 * margin - 88 });
-  doc.font("Sarabun").fontSize(10).fillColor("#9aa59f").text(`Generated ${issuedAt}`, cardX + cardW - margin - 88, footerY, { width: 88, align: "right" });
+  doc.font("Sarabun").fontSize(10).fillColor("#69776e").text(`ติดต่อร้าน: ${contactEmail} | LINE OA: ${lineOaId}`, cardX + margin, footerY, { width: cardW - 2 * margin - 88 });
+  doc.font("Sarabun").fontSize(9).fillColor("#9aa59f").text(`Generated ${issuedAt}`, cardX + cardW - margin - 88, footerY, { width: 88, align: "right" });
 
   doc.end();
   const pdfBuffer = await pdf;
