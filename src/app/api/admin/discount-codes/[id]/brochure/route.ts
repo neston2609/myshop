@@ -228,20 +228,19 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     doc.text(line, detailX + 16, logoY + 154 + index * 13, { width: detailW - 32 });
   });
 
-  const qrX = cardX + 58;
-  const qrY = cardY + 390;
-  drawRoundBox(doc, qrX - 14, qrY - 14, 140, 140, 10, "#ffffff", "#d7ddd4");
-  doc.image(qrBuffer, qrX, qrY, { width: 112, height: 112 });
-  doc.font("SarabunBold").fontSize(14).fillColor("#15211b").text("Scan to shop", qrX - 14, qrY + 119, { width: 140, align: "center" });
+  const qrX = cardX + 62;
+  const qrY = cardY + 408;
+  drawRoundBox(doc, qrX - 14, qrY - 14, 128, 128, 10, "#ffffff", "#d7ddd4");
+  doc.image(qrBuffer, qrX, qrY, { width: 100, height: 100 });
 
   const stepsX = detailX;
-  const stepsY = cardY + 404;
-  drawRoundBox(doc, stepsX, stepsY, detailW, 124, 10, "#ffffff", "#d7ddd4");
-  doc.font("SarabunBold").fontSize(16).fillColor("#15211b").text("วิธีใช้งาน", stepsX + 16, stepsY + 16);
-  doc.font("Sarabun").fontSize(12).fillColor("#253d32");
-  doc.text("1. สแกน QR เพื่อเข้าร้านค้า", stepsX + 16, stepsY + 44, { width: detailW - 32 });
-  doc.text("2. เลือกสินค้าที่ต้องการ", stepsX + 16, stepsY + 63, { width: detailW - 32 });
-  doc.text(`3. ใส่โค้ด ${discount.code} ตอนชำระเงิน`, stepsX + 16, stepsY + 82, { width: detailW - 32 });
+  const stepsY = cardY + 450;
+  drawRoundBox(doc, stepsX, stepsY, detailW, 92, 10, "#ffffff", "#d7ddd4");
+  doc.font("SarabunBold").fontSize(14).fillColor("#15211b").text("วิธีใช้งาน", stepsX + 16, stepsY + 12);
+  doc.font("Sarabun").fontSize(10.5).fillColor("#253d32");
+  doc.text("1. สแกน QR เพื่อเข้าร้านค้า", stepsX + 16, stepsY + 35, { width: detailW - 32 });
+  doc.text("2. เลือกสินค้าที่ต้องการ", stepsX + 16, stepsY + 51, { width: detailW - 32 });
+  doc.text(`3. ใส่โค้ด ${discount.code} ตอนชำระเงิน`, stepsX + 16, stepsY + 67, { width: detailW - 32 });
 
   const footerY = pageHeight - 40;
   doc.moveTo(cardX + margin, footerY - 10).lineTo(cardX + cardW - margin, footerY - 10).lineWidth(1).strokeColor("#d7ddd4").stroke();
