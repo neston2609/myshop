@@ -16,7 +16,7 @@ const sourceLastUpdated = commandOrFallback("git log -1 --format=%cI", new Date(
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  serverExternalPackages: ["ssh2-sftp-client", "ssh2", "basic-ftp"],
+  serverExternalPackages: ["ssh2-sftp-client", "ssh2", "basic-ftp", "pdfkit"],
   env: {
     NEXT_PUBLIC_BUILD_VERSION: `${packageVersion}+${commitHash}`,
     NEXT_PUBLIC_SOURCE_LAST_UPDATED: sourceLastUpdated,

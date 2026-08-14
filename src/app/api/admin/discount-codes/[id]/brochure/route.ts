@@ -142,6 +142,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   const doc = new PDFDocument({
     size: "A5",
     margin: 0,
+    font: sarabunRegular,
     info: {
       Title: `${discount.code} brochure`,
       Author: shopName,

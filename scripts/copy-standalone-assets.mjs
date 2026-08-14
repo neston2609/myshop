@@ -12,6 +12,7 @@ if (!existsSync(standaloneDir)) {
 const copies = [
   [join(root, ".next", "static"), join(standaloneDir, ".next", "static")],
   [join(root, "public"), join(standaloneDir, "public")],
+  [join(root, "node_modules", "pdfkit", "js", "data"), join(standaloneDir, "node_modules", "pdfkit", "js", "data")],
 ];
 
 for (const [source, destination] of copies) {
