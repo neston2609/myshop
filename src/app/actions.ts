@@ -630,6 +630,37 @@ export async function markOrderPaidAction(formData: FormData) {
   redirect("/admin/orders?message=paid-marked");
 }
 
+export async function deleteOrderAction(formData: FormData) {
+  const session = await requireAdmin();
+  const orderId = formValue(formData, "orderId");
+  const adminPassword = formValue(formData, "adminPassword");
+  const page = formValue(formData, "page") || "1";
+  const params = new URLSearchParams({ page });
+
+  if (!orderId) {
+    params.set("message", "order-not-found");
+    redirect(`/admin/orders?${params.toString()}`);
+  }
+
+  const admin = await prisma.user.findUnique({ where: { id: session.id }, select: { passwordHash: true } });
+  if (!admin || !(await verifyPassword(adminPassword, admin.passwordHash))) {
+    params.set("message", "admin-password-invalid");
+    redirect(`/admin/orders?${params.toString()}`);
+  }
+
+  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { id: true } });
+  if (!order) {
+    params.set("message", "order-not-found");
+    redirect(`/admin/orders?${params.toString()}`);
+  }
+
+  await prisma.order.delete({ where: { id: order.id } });
+  params.set("message", "order-deleted");
+  revalidatePath("/admin/orders");
+  revalidatePath("/account");
+  redirect(`/admin/orders?${params.toString()}`);
+}
+
 export async function saveProductAction(formData: FormData) {
   await requireAdmin();
   const input = productSchema.parse({ ...Object.fromEntries(formData), active: formData.has("active") });

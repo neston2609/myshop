@@ -61,10 +61,10 @@ export function ProductImageGallery({ images, fallbackAlt }: { images: GalleryIm
           <button
             type="button"
             onClick={() => setIsOpen(false)}
-            className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-900 transition hover:scale-105 active:scale-95"
+            className="absolute right-5 top-5 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full border border-black/10 bg-white text-black shadow-xl ring-4 ring-white/25 transition hover:scale-105 hover:bg-slate-50 active:scale-95"
             aria-label="Close gallery"
           >
-            <X size={22} />
+            <X size={28} strokeWidth={2.8} />
           </button>
           {galleryImages.length > 1 ? (
             <button

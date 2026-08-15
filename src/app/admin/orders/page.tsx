@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { markOrderPaidAction, updateOrderTrackingAction } from "@/app/actions";
+import { deleteOrderAction, markOrderPaidAction, updateOrderTrackingAction } from "@/app/actions";
 import { money } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { findShippingCarrier, shippingCarriers, trackingHref } from "@/lib/shipping-carriers";
@@ -34,8 +34,11 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
     "tracking-not-allowed": "Tracking can be added only after payment is successful.",
     "carrier-invalid": "Selected carrier is invalid.",
     "paid-marked": "Order marked as paid.",
+    "order-deleted": "Order deleted.",
+    "order-not-found": "Order was not found.",
+    "admin-password-invalid": "Admin password is incorrect.",
   }[params.message || ""];
-  const isError = params.message === "tracking-not-allowed" || params.message === "carrier-invalid";
+  const isError = params.message === "tracking-not-allowed" || params.message === "carrier-invalid" || params.message === "order-not-found" || params.message === "admin-password-invalid";
   const orderCount = await prisma.order.count();
   const totalPages = Math.max(1, Math.ceil(orderCount / ordersPerPage));
   const safePage = Math.min(currentPage, totalPages);
@@ -149,6 +152,27 @@ export default async function AdminOrdersPage({ searchParams }: AdminOrdersPageP
                   ใส่ Tracking ได้หลังลูกค้าชำระเงินสำเร็จแล้ว
                 </p>
               )}
+              <details className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm">
+                <summary className="cursor-pointer font-semibold text-red-800">Delete order</summary>
+                <form action={deleteOrderAction} className="mt-3 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                  <input type="hidden" name="orderId" value={order.id} />
+                  <input type="hidden" name="page" value={safePage} />
+                  <label className="grid gap-1.5 font-semibold text-red-950">
+                    <span>ใส่รหัสผ่าน Admin เพื่อยืนยันการลบ Order {order.orderNumber}</span>
+                    <input
+                      name="adminPassword"
+                      type="password"
+                      required
+                      autoComplete="current-password"
+                      placeholder="Admin password"
+                      className="h-11 rounded-md border border-red-200 bg-white px-3 text-slate-950 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                    />
+                  </label>
+                  <button className="h-11 rounded-md bg-red-700 px-4 font-semibold text-white transition hover:bg-red-800 active:translate-y-px">
+                    Delete order
+                  </button>
+                </form>
+              </details>
             </article>
           );
         })}
