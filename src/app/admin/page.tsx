@@ -1,13 +1,19 @@
+import { OrderStatus } from "@prisma/client";
 import { money } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminPage() {
-  const [orders, products, customers] = await Promise.all([
+  const paidRevenueStatuses = [OrderStatus.PAID, OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.COMPLETED];
+  const [orders, revenueTotal, products, customers] = await Promise.all([
     prisma.order.findMany({ take: 8, orderBy: { createdAt: "desc" } }),
+    prisma.order.aggregate({
+      where: { status: { in: paidRevenueStatuses } },
+      _sum: { total: true },
+    }),
     prisma.product.count(),
     prisma.user.count({ where: { role: "CUSTOMER" } }),
   ]);
-  const revenue = orders.reduce((sum, order) => sum + Number(order.total), 0);
+  const revenue = revenueTotal._sum?.total || 0;
 
   return (
     <div className="space-y-6">
